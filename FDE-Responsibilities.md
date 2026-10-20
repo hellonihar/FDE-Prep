@@ -1,231 +1,260 @@
-# Field Deployment Engineer (FDE) — Responsibilities Reference
+# Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 1.0
+**Version:** 2.0
 **Last Updated:** 2026-10-20
-**Tags:** #field-engineering #deployment #FDE #career-reference
+**Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
 ---
 
 ## 1. Role Overview
 
-A **Field Deployment Engineer** is the bridge between product engineering and real-world customer operations. They own the end-to-end deployment of hardware and software systems at customer sites — from initial site assessment through installation, commissioning, handoff, and ongoing support. The FDE operates where "the rubber meets the road": in the field, under real-world constraints, often with an operator or customer waiting.
+A **Forward Deployed Engineer (FDE)** in AI implementation is an embedded builder who bridges the gap between frontier AI models and production-grade systems within customer environments. Unlike traditional deployment engineers, the AI FDE doesn't just install infrastructure — they **design, build, evaluate, and optimize** AI applications (RAG pipelines, agentic workflows, fine-tuned models) directly alongside customer teams, compressing adoption cycles from months to weeks.
 
-**Core mandate:** Deliver working systems at customer sites, on time and safely, and feed field learnings back to engineering so the product gets better with every deployment.
+**Core mandate:** Turn AI research breakthroughs into working production systems at strategic customers, capture field learnings as eval-driven feedback that changes product and model roadmaps, and codify repeatable patterns that scale beyond any single deployment.
 
 **What this role is NOT:**
-- Not a pure developer (you write scripts/configs, not product features)
-- Not a pure technician (you make engineering decisions, not just follow steps)
-- Not a pure project manager (you execute hands-on, not just coordinate)
+- Not a pure research scientist (you ship products, not papers)
+- Not a pure solutions architect (you write production code, not just diagrams)
+- Not a pure consultant (you build and own the system, not just advise)
+- Not a pure MLOps engineer (you operate at the customer's edge, not just internal infra)
 
-The FDE is a **hybrid role** requiring simultaneous competency in mechanical, electrical, software, and networking domains — plus the soft skills to represent the company on a customer's site, independently.
+The AI FDE is a **hybrid role** requiring simultaneous competency in **ML engineering, full-stack development, data engineering, systems integration, and customer-facing communication** — plus the autonomy to operate independently in ambiguous, high-stakes customer environments.
+
+**The FDE operates at the frontier of enterprise AI deployments**, sitting between Research/Product and the customer's production reality. You are the eyes, hands, and voice of the AI platform in the field.
 
 ---
 
 ## 2. Core Responsibility Pillars
 
-The role decomposes into six pillars:
+The role decomposes into seven pillars:
 
 | # | Pillar | One-Line Summary |
 |---|--------|-----------------|
-| A | Pre-Deployment Planning & Site Assessment | Know what you're walking into before you arrive |
-| B | Hardware Installation & Integration | Physical systems done right the first time |
-| C | Software Deployment & Configuration | Make the software work in the real environment |
-| D | Commissioning, Validation & Go-Live | Prove it works end-to-end before handoff |
-| E | Troubleshooting, Support & Sustainment | Keep it running when things break |
-| F | Documentation, Knowledge Transfer & Enablement | Make the next deployment easier than the last |
+| A | Discovery, Scoping & Architecture Design | Understand the problem before touching a keyboard |
+| B | Infrastructure & GPU/Edge Provisioning | Build the foundation that inference depends on |
+| C | Model Deployment & Inference Stack | Deploy models and build the AI application layer |
+| D | Evaluation, Red-Teaming & Go-Live | Prove it works — and prove it's safe |
+| E | Production Monitoring, Debugging & Optimization | Keep it running, make it faster, make it cheaper |
+| F | Playbooks, Reusable Patterns & Knowledge Transfer | Make the next deployment 10x easier |
+| G | Feedback Loop to Research & Product | Change the model and product with field truth |
 
 ---
 
 ## 3. Detailed Task Breakdown by Pillar
 
-### Pillar A: Pre-Deployment Planning & Site Assessment
+### Pillar A: Discovery, Scoping & Architecture Design
 
 <details>
 <summary><b>18 core tasks</b> (click to expand)</summary>
 
-- [ ] Conduct virtual or physical site surveys before deployment to understand the environment
-- [ ] Map the physical layout: equipment locations, cable routing paths, mounting surfaces, power sources
-- [ ] Identify site prerequisites: power availability (voltage, amperage, phase), network connectivity, structural mounting points, environmental conditions (temperature, dust, moisture, vibration)
-- [ ] Assess network infrastructure: existing LAN/WAN, firewall rules, VLAN configurations, wireless coverage, bandwidth constraints
-- [ ] Identify and document site-specific constraints: restricted access hours, safety protocols, noise/heat limitations, equipment downtime windows
-- [ ] Coordinate with customer stakeholders on logistics: badge/access requests, shipping/receiving of equipment, staging areas, parking/loading dock access
-- [ ] Review and validate the deployment plan/SOW against actual site conditions
-- [ ] Create a detailed deployment schedule with milestones, dependencies, and contingency buffers
-- [ ] Identify risks and develop mitigation plans (equipment failure, site not ready, weather, parts delays)
-- [ ] Order and verify all hardware/software components needed for deployment; check against BOM
-- [ ] Prepare and test the deployment toolkit: hand tools, power tools, cable testers, laptops, dongles, specialized equipment
-- [ ] Pre-configure hardware and software in lab/staging environment before shipping to site ("burn-in" or "end-of-line" testing)
-- [ ] Capture and archive baseline configuration data for rollback capability
-- [ ] Coordinate shipping logistics: crate packing, customs documentation (for international), freight scheduling, insurance
-- [ ] Align with sales/project management on customer expectations, success criteria, and acceptance milestones
-- [ ] Participate in pre-deployment kickoffs with internal teams (engineering, PM, support)
-- [ ] Verify that all safety documentation, certifications, and compliance requirements are met before shipping
-- [ ] Prepare customer-facing deployment documentation: schedules, contact lists, site rules, escalation paths
+- [ ] Lead technical discovery sessions with customer ML, data, and platform engineering teams
+- [ ] Understand the customer's business problem, workflow, and success criteria in domain terms
+- [ ] Define measurable success metrics: accuracy, latency (TTFT, tokens/sec), cost-per-request, hallucination rate, user adoption, task completion rate
+- [ ] Assess data readiness: corpus quality, volume, freshness, PII/sensitive content, labeling status, access patterns
+- [ ] Evaluate RAG vs. fine-tuning vs. prompting vs. agentic approaches — recommend the right technique for the problem
+- [ ] Design the target architecture: cloud vs. edge vs. hybrid; open vs. closed models; single vs. multi-model routing
+- [ ] Select vector database and embedding strategy based on scale, latency, and query patterns (Pinecone, Weaviate, Qdrant, Milvus, pgvector)
+- [ ] Assess security and compliance requirements: data residency, SOC2, HIPAA, GDPR, EU AI Act, customer-specific policies
+- [ ] Identify integration points: customer APIs, databases, enterprise systems (Salesforce, ServiceNow, SAP, Confluence, SharePoint), identity providers (Okta, Azure AD)
+- [ ] Map stakeholders: executive sponsor, technical POC, end-users, IT/security, legal/compliance
+- [ ] Define the phased delivery plan: POC → pilot → production, with clear exit criteria per phase
+- [ ] Identify risks: data quality, model capability gaps, integration complexity, timeline, hardware lead times
+- [ ] Scope the engagement: workstreams, deliverables, dependencies, customer effort required
+- [ ] Participate in pre-sales technical validation: demos, reference architectures, POC proposals
+- [ ] Review and validate SOW statements against actual technical requirements
+- [ ] Prepare architecture diagrams and technical design documents for customer review
+- [ ] Align internal teams (Product, Research, Solutions Architecture) on the deployment plan
+- [ ] Conduct data exploratory analysis: sample documents, measure embedding quality, test baseline retrieval
 
 </details>
 
 ---
 
-### Pillar B: Hardware Installation & Integration
-
-<details>
-<summary><b>20 core tasks</b> (click to expand)</summary>
-
-- [ ] Unpack, inventory, and inspect all hardware upon arrival; document any shipping damage
-- [ ] Perform mechanical installation: mount compute units, sensors, cameras, antennas, controllers, and peripheral devices
-- [ ] Fabricate or modify mounting brackets, fixtures, and hardware when site conditions require custom solutions (drill, tap, cut, bend)
-- [ ] Route, secure, and protect cable harnesses; ensure proper strain relief and service loops
-- [ ] Terminate electrical connections: power wiring, signal wiring, ground connections, connector mating
-- [ ] Install and terminate network cabling: Ethernet (Cat5e/6/6a), fiber optic, serial/RS-232/RS-485, CAN bus
-- [ ] Install power distribution: DC power supplies, UPS units, circuit breakers, fuses, surge protection
-- [ ] Connect sensors: LiDAR, cameras, IMUs, GPS/GNSS, encoders, proximity sensors, temperature/humidity sensors
-- [ ] Integrate with existing machine/vehicle/infrastructure interfaces: CAN, J1939, Modbus, BACnet, proprietary protocols
-- [ ] Install grounding and bonding systems per electrical codes and manufacturer specs
-- [ ] Perform initial power-on sequences with proper current limiting and monitoring
-- [ ] Verify polarity, voltage levels, and signal integrity at all connection points
-- [ ] Validate safety circuits: E-Stops, safety relays, interlocks, light curtains, lockout/tagout procedures
-- [ ] Document as-built wiring diagrams and installation photos for handoff
-- [ ] Secure all enclosures against environmental ingress (IP rating compliance: dust, water)
-- [ ] Label all cables, connectors, and components per naming conventions
-- [ ] Identify and mitigate install-related failure modes: vibration loosening, thermal expansion, abrasion, UV exposure, chemical exposure
-- [ ] Perform hardware acceptance checks: visual inspection, continuity tests, insulation resistance tests, ground fault verification
-- [ ] Clean the installation area and remove debris/packaging per site rules
-- [ ] Propose hardware design improvements based on field installation experience (mounting, harnessing, serviceability)
-
-</details>
-
----
-
-### Pillar C: Software Deployment & Configuration
+### Pillar B: Infrastructure & GPU/Edge Provisioning
 
 <details>
 <summary><b>18 core tasks</b> (click to expand)</summary>
 
-- [ ] Install and configure operating systems on edge compute devices (typically Linux: Ubuntu, Debian, Rocky, or embedded distros)
-- [ ] Install and configure application software, services, and middleware per deployment specifications
-- [ ] Deploy containerized workloads (Docker, Docker Compose, Kubernetes/K3s) and manage container images/registries
-- [ ] Configure networking: IP addressing (static/dynamic), DNS, DHCP, routing, VLANs, firewall rules (iptables/nftables/ufw)
-- [ ] Establish and troubleshoot network connectivity between all system components: sensors ↔ compute ↔ cloud/backend
-- [ ] Configure wireless links: Wi-Fi, cellular (4G/5G), radio/mesh networks, satellite links
-- [ ] Parameterize software for the specific operational context: site-specific configs, calibration data, mapping files, mission parameters
-- [ ] Set up VPN or secure tunnel connections to corporate/backend systems
-- [ ] Configure time synchronization (NTP/PTP) across all system nodes
-- [ ] Set up logging, monitoring, and telemetry collection agents (Prometheus, Grafana, ELK, custom agents)
-- [ ] Configure remote access capabilities for ongoing support (SSH, remote desktop, VPN)
-- [ ] Manage software licenses, certificates, and credentials securely
-- [ ] Deploy and configure update mechanisms: OTA (over-the-air) update pipelines, package repositories, image registries
-- [ ] Perform software version management: tag deployments, maintain version records, handle rollback procedures
-- [ ] Write and execute shell scripts or Python scripts to automate repetitive configuration tasks
-- [ ] Validate system security posture: disable unnecessary services, apply patches, harden configurations
-- [ ] Integrate with customer IT systems: Active Directory, LDAP, SIEM, ticketing systems, cloud platforms
-- [ ] Document all software configurations, versions, and customizations applied at the site
+- [ ] Provision and configure GPU compute: cloud instances (A100, H100, L40S, T4), on-prem clusters, or edge devices (Jetson Orin, HEBO)
+- [ ] Deploy and manage Kubernetes clusters for model serving (EKS, GKE, AKS, OpenShift)
+- [ ] Configure model serving infrastructure: KServe, KubeRay, Triton Inference Server, Ray Serve
+- [ ] Set up inference servers: vLLM, SGLang, TensorRT-LLM, TGI (Text Generation Inference), Ollama, llama.cpp
+- [ ] Configure GPU scheduling and resource management: MIG, time-slicing, NVIDIA GPU Operator, Run:ai
+- [ ] Establish networking: VPC design, private endpoints, VPC peering, service mesh, load balancers
+- [ ] Configure TLS/mTLS, certificate management, and service-to-service authentication
+- [ ] Set up private AI model endpoints (Azure Private Endpoint, AWS PrivateLink, GCP Private Service Connect)
+- [ ] Configure model registry and artifact management (MLflow Model Registry, Vertex AI Model Registry, Weights & Biases)
+- [ ] Set up container registries and image management for inference containers
+- [ ] Configure storage: model weights (S3, GCS, Blob), vector DB persistence, dataset caching, NVMe for hot paths
+- [ ] Implement autoscaling: HPA for inference pods, GPU node autoscaling, queue-based scaling for batch
+- [ ] Configure monitoring infrastructure: Prometheus, Grafana, NVIDIA DCGM Exporter, node exporters
+- [ ] Set up CI/CD pipelines for model and application deployment (GitHub Actions, ArgoCD, Flux)
+- [ ] Provision edge compute for low-latency or air-gapped deployments (NVIDIA Jetson, Intel NUC, ruggedized servers)
+- [ ] Configure 5G/LTE/Wi-Fi connectivity for edge deployments; test failover scenarios
+- [ ] Implement secret management: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, Kubernetes Secrets
+- [ ] Validate infrastructure: GPU health checks, network throughput, storage IOPS, cold-start benchmarks
 
 </details>
 
 ---
 
-### Pillar D: Commissioning, Validation & Go-Live
-
-<details>
-<summary><b>15 core tasks</b> (click to expand)</summary>
-
-- [ ] Execute end-to-end system bring-up: power-on all subsystems in correct sequence
-- [ ] Verify communication between all hardware and software components (bus checks, ping tests, data flow validation)
-- [ ] Perform functional testing of each subsystem individually (sensor calibration, actuator testing, compute health checks)
-- [ ] Run integration tests across subsystems to validate full system behavior
-- [ ] Validate safety systems under simulated fault conditions: E-Stop triggers, emergency shutdowns, watchdog timers
-- [ ] Conduct performance benchmarking: uptime, throughput, latency, accuracy, intervention rates
-- [ ] Test under operational conditions: real-world loads, environmental extremes, network degradation scenarios
-- [ ] Execute acceptance test procedures (ATP) per customer/SOW requirements
-- [ ] Capture baseline performance metrics for future reference and SLA tracking
-- [ ] Identify and resolve punch list items before formal handoff
-- [ ] Conduct customer acceptance walkthrough: demonstrate system functionality against success criteria
-- [ ] Obtain formal sign-off from customer stakeholders on deployment completion
-- [ ] Transfer system credentials, documentation, and access to customer operations team
-- [ ] Establish monitoring dashboards and alerting for operational visibility
-- [ ] Set expectations for hypercare/support period: response times, escalation contacts, known limitations
-
-</details>
-
----
-
-### Pillar E: Troubleshooting, Support & Sustainment
+### Pillar C: Model Deployment & Inference Stack
 
 <details>
 <summary><b>20 core tasks</b> (click to expand)</summary>
 
-- [ ] Act as the primary on-site technical escalation point during and after deployment
-- [ ] Diagnose hardware failures: sensor malfunctions, compute hardware faults, power issues, cable/connector failures
-- [ ] Diagnose software failures: application crashes, service failures, configuration errors, version incompatibilities
-- [ ] Diagnose network failures: connectivity loss, intermittent links, packet loss, DNS failures, firewall misconfigurations
-- [ ] Collect and analyze logs, telemetry, and diagnostic data from all system components
-- [ ] Reproduce intermittent or field-reported issues under controlled conditions
-- [ ] Perform root cause analysis (RCA) on failures and document findings
-- [ ] Execute workarounds and hotfixes in the field while permanent fixes are developed
-- [ ] Replace or repair failed hardware components (sensors, cables, compute modules, power supplies)
-- [ ] Reconfigure software or network settings to resolve operational issues
-- [ ] Prioritize issues based on customer impact and safety implications
-- [ ] Communicate issue status, ETAs, and workarounds to customer stakeholders clearly and regularly
-- [ ] Escalate unresolved issues to internal engineering teams with complete diagnostic packages (logs, configs, reproduction steps)
-- [ ] Provide remote support to customer sites between on-site deployments
-- [ ] Track and manage field issues in ticketing systems; ensure timely resolution
-- [ ] Monitor deployment health metrics (uptime, performance, error rates) and proactively address degradation
-- [ ] Conduct post-incident reviews with internal teams; contribute to knowledge base articles
-- [ ] Identify recurring field issues and advocate for product improvements with engineering
-- [ ] Perform preventive maintenance during scheduled visits: firmware updates, hardware inspections, calibration checks
-- [ ] Support proof-of-concept (POC) and pilot deployments: setup, data collection, evaluation, customer debrief
+- [ ] Deploy open-source LLMs: Llama, Mistral, Qwen, DeepSeek, Phi, Gemma — configure quantization and serving parameters
+- [ ] Integrate proprietary/closed models: OpenAI GPT, Anthropic Claude, Google Gemini, Cohere — configure API keys, rate limits, fallbacks
+- [ ] Configure model parameters: temperature, top-p, max tokens, stop sequences, system prompts per use case
+- [ ] Implement model routing and fallback logic: primary model → fallback model → error handling
+- [ ] Build RAG pipelines: document ingestion → parsing → chunking → embedding → indexing → retrieval → reranking → generation
+- [ ] Configure embedding models: OpenAI text-embedding-3, Cohere Embed, open-source (BGE, E5, GTE) — match to latency/cost/corpus requirements
+- [ ] Implement chunking strategies: fixed-size, semantic, recursive, parent-child, contextual — optimize for retrieval quality
+- [ ] Build retrieval logic: dense (vector), sparse (BM25), hybrid, multi-query, HyDE, reranking (Cohere Rerank, BGE Reranker, ColBERT)
+- [ ] Design and build agentic workflows: multi-step reasoning, tool use, planning, reflection loops (LangGraph, CrewAI, ADK, AutoGen)
+- [ ] Build MCP (Model Context Protocol) servers for customer tool and data source integration
+- [ ] Implement function calling / tool use: API wrappers, database queries, search, code execution, customer system actions
+- [ ] Configure context management: conversation history, sliding window, summarization, memory persistence
+- [ ] Implement guardrails: input validation, output filtering, NeMo Guardrails, Llama Guard, Presidio (PII), custom validators
+- [ ] Build structured output handling: JSON mode, schema validation, function call parsing, error recovery
+- [ ] Implement streaming responses: SSE, WebSocket, token streaming for UX
+- [ ] Configure caching: response cache (Redis), embedding cache, semantic cache for similar queries
+- [ ] Build multi-modal capabilities when required: vision (images, documents), audio, video processing
+- [ ] Implement fine-tuning workflows when needed: SFT, DPO, RFT — dataset preparation, training job submission, model evaluation
+- [ ] Set up model versioning and A/B testing infrastructure: canary deployments, traffic splitting, version comparison
+- [ ] Optimize inference performance: batch size tuning, KV cache optimization, prefix caching, speculative decoding, quantization (AWQ, GPTQ, FP8)
 
 </details>
 
 ---
 
-### Pillar F: Documentation, Knowledge Transfer & Enablement
+### Pillar D: Evaluation, Red-Teaming & Go-Live
+
+<details>
+<summary><b>18 core tasks</b> (click to expand)</summary>
+
+- [ ] Design and implement evaluation frameworks: golden sets, regression suites, continuous eval pipelines
+- [ ] Define evaluation metrics per use case: correctness, faithfulness, relevance, completeness, coherence, toxicity, bias
+- [ ] Build LLM-as-judge evaluation pipelines: rubric design, judge model selection, calibration against human ratings
+- [ ] Curate golden evaluation datasets with customer domain experts: representative queries, expected outputs, edge cases
+- [ ] Implement automated eval harnesses: batch evaluation, CI-triggered eval, scheduled regression testing
+- [ ] Conduct red-teaming exercises: prompt injection, jailbreak attempts, PII leakage, harmful content generation, adversarial inputs
+- [ ] Test for failure modes: hallucination, refusal behavior, sycophancy, instruction following, multilingual performance
+- [ ] Perform latency and throughput load testing: concurrent users, tokens/sec, TTFT, cold-start time, autoscaling behavior
+- [ ] Conduct cost analysis: cost-per-request, cost-per-user, token usage patterns, optimization opportunities
+- [ ] Test integration endpoints: API contracts, error handling, timeout behavior, retry logic, rate limiting
+- [ ] Execute acceptance testing against customer success criteria: side-by-side comparison with baseline, human evaluation
+- [ ] Run canary deployments for initial production traffic: monitor metrics, compare against baseline, rollback triggers
+- [ ] Conduct stakeholder demos: executive summary view, technical deep-dive view, live interaction session
+- [ ] Validate guardrails under adversarial conditions: jailbreak resistance, PII filtering, content policy enforcement
+- [ ] Document evaluation results in customer-facing format: metrics, charts, findings, recommendations
+- [ ] Obtain formal customer sign-off on deployment acceptance criteria
+- [ ] Define production SLOs: latency targets, availability, error rates, quality thresholds
+- [ ] Prepare go-live checklist: monitoring active, alerts configured, rollback plan ready, on-call roster set
+
+</details>
+
+---
+
+### Pillar E: Production Monitoring, Debugging & Optimization
+
+<details>
+<summary><b>20 core tasks</b> (click to expand)</summary>
+
+- [ ] Implement observability stack: LLM tracing (LangSmith, Langfuse, Arize, Phoenix), metrics, logging, distributed tracing
+- [ ] Instrument RAG pipelines: track retrieval quality, chunk relevance, embedding drift, retrieval latency per query
+- [ ] Instrument agent workflows: step-by-step traces, tool call success/failure, reasoning chains, token attribution per step
+- [ ] Build dashboards: real-time quality metrics, latency percentiles, token usage, cost tracking, error rates
+- [ ] Configure alerting: quality degradation, latency spikes, error rate breaches, cost anomalies, model drift
+- [ ] Debug production issues: trace failed queries, identify retrieval failures, isolate tool call errors, reproduce edge cases
+- [ ] Perform root cause analysis on quality degradation: data drift, model version changes, embedding model mismatches, pipeline regressions
+- [ ] Optimize latency: reduce retrieval time (index tuning, query optimization), reduce generation time (prompt compression, smaller models for simple queries)
+- [ ] Optimize cost: model routing (small model for simple, large for complex), prompt compression, caching strategies, batch processing
+- [ ] Optimize quality: prompt engineering iterations, retrieval tuning (top-k, score thresholds), reranking improvements, few-shot example updates
+- [ ] Implement feedback loops: user thumbs up/down, correction capture, implicit signals (edit rate, regeneration rate)
+- [ ] Monitor data quality: ingestion pipeline health, document freshness, embedding index integrity, chunk coverage
+- [ ] Handle model version updates: evaluate new model versions against golden sets, plan migration, manage rollback
+- [ ] Manage incident response: triage, communicate with customer, escalate to internal engineering, conduct post-mortems
+- [ ] Perform preventive maintenance: index rebuilds, cache clearing, dependency updates, security patches
+- [ ] Support batch/offline workloads: document processing, bulk embedding, periodic re-indexing, data pipeline backfills
+- [ ] Conduct regular quality reviews with customer stakeholders: metrics review, feedback collection, improvement planning
+- [ ] Document and fix recurring issues: file bugs, create workarounds, contribute patches, update runbooks
+- [ ] Manage capacity planning: GPU utilization, storage growth, vector DB scaling, traffic forecasting
+- [ ] Provide remote support between on-site visits: async debugging, scheduled check-ins, emergency escalation paths
+
+</details>
+
+---
+
+### Pillar F: Playbooks, Reusable Patterns & Knowledge Transfer
 
 <details>
 <summary><b>16 core tasks</b> (click to expand)</summary>
 
-- [ ] Create and maintain site-specific deployment documentation: as-built diagrams, configuration records, credential inventories
-- [ ] Author and update standardized installation guides, SOPs, and playbooks reusable across sites
-- [ ] Develop and maintain checklists: pre-deployment, installation, commissioning, handoff, maintenance
-- [ ] Create wiring diagrams, cable schedules, and electrical schematics (or mark up existing ones)
-- [ ] Document network architecture: topology diagrams, IP address plans, VLAN mappings, firewall rules
-- [ ] Produce training materials for customer operators: user guides, quick-start cards, video walkthroughs
-- [ ] Deliver hands-on training to customer operations, maintenance, and IT teams
-- [ ] Enable dealer/partner/partner-technician teams to perform installations independently
-- [ ] Capture and share field lessons learned with internal engineering and deployment teams
-- [ ] Contribute to product feedback: file bug reports, feature requests, and design improvement suggestions based on field experience
-- [ ] Maintain deployment templates and frameworks that scale across new sites
-- [ ] Create and refine test protocols and acceptance criteria for repeatable commissioning
-- [ ] Document site-specific customer requirements, preferences, and operational procedures
-- [ ] Build and maintain FAQ / troubleshooting guides for common field issues
-- [ ] Participate in internal knowledge-sharing sessions (brown-bags, retrospectives, post-mortems)
-- [ ] Review and improve deployment processes based on cumulative experience across multiple sites
+- [ ] Codify deployment playbooks: step-by-step guides per deployment pattern (RAG, agents, fine-tuning, multimodal)
+- [ ] Build reusable infrastructure modules: Terraform, Helm charts, Kubernetes manifests, Docker Compose templates
+- [ ] Create reusable application components: RAG pipeline modules, agent templates, eval harnesses, monitoring dashboards
+- [ ] Develop deployment templates: reference architectures for common verticals (legal, support, code, search)
+- [ ] Author and maintain architecture decision records (ADRs): capture "why" behind technical choices for future reference
+- [ ] Create customer-facing documentation: setup guides, API references, configuration guides, troubleshooting runbooks
+- [ ] Develop training materials: customer engineer onboarding, model operations, prompt engineering, debugging techniques
+- [ ] Deliver hands-on training: customer ML engineers, data scientists, platform teams on system operation and debugging
+- [ ] Build internal knowledge base: deployment patterns, lessons learned, common pitfalls, tool comparisons
+- [ ] Create evaluation templates: golden set creation guide, eval framework templates, red-teaming checklists
+- [ ] Document integration patterns: MCP server templates, API connector libraries, data ingestion recipes
+- [ ] Produce reusable prompt libraries: system prompts, few-shot examples, chain-of-thought templates per use case
+- [ ] Share deployment patterns with the broader FDE team: brown-bags, pattern libraries, case studies
+- [ ] Review and improve deployment processes based on cumulative experience across multiple customers
+- [ ] Package customer-specific work into reusable blocks for the shared internal library
+- [ ] Contribute to open-source tools: bug fixes, feature PRs, documentation improvements to vLLM, LangChain, LangGraph, etc.
 
 </details>
 
 ---
 
-## 4. Day in the Life: Typical Deployment Week
+### Pillar G: Feedback Loop to Research & Product
 
-### On-Site Deployment Week (Example — 5-day intensive install)
+<details>
+<summary><b>12 core tasks</b> (click to expand)</summary>
+
+- [ ] Collect structured field data: model failure modes, edge cases, capability gaps, latency bottlenecks, cost pain points
+- [ ] Capture customer feature requests: SDK improvements, model capabilities, platform features, integration connectors
+- [ ] Document specific model weaknesses: hallucination patterns, instruction-following gaps, domain knowledge deficits, reasoning failures
+- [ ] Build eval datasets from real customer queries (anonymized, permissioned) for internal model evaluation
+- [ ] Partner with Research on evaluation design: define metrics, build test suites, interpret results, prioritize model improvements
+- [ ] Partner with Product on roadmap input: translate field patterns into prioritized feature requests with evidence
+- [ ] Participate in model evaluation cycles: test new model versions against customer workloads, report findings
+- [ ] Identify repeatable field patterns: common integration challenges, recurring architecture decisions, friction points
+- [ ] Convert friction points into product feature requests: formal, evidence-based submissions to Product/Engineering
+- [ ] Contribute to platform gap analysis: where the product is missing capabilities that customers need
+- [ ] Share anonymized deployment learnings across the FDE team: what works, what doesn't, emerging patterns
+- [ ] Participate in product design reviews: provide field perspective on upcoming features, UX decisions, API design
+
+</details>
+
+---
+
+## 4. Day in the Life: AI Deployment Week
+
+### On-Site Deployment Week (Example — POC-to-Pilot engagement)
 
 | Day | Theme | Key Activities |
 |-----|-------|---------------|
-| **Mon** | Arrival & Site Setup | Travel to site; check in with customer POC; badge/access setup; unload and inventory equipment; set up staging/work area; review deployment plan with customer; site walkthrough; confirm power/network readiness |
-| **Tue** | Hardware Installation Day 1 | Mount compute units, sensors, and enclosures; run cable routes; terminate electrical connections; begin wiring harness installation; coordinate with customer facilities/electricians as needed |
-| **Wed** | Hardware Installation Day 2 | Complete remaining hardware installs; terminate network cables; install power distribution; perform continuity and voltage checks; label all cables and components; photo-document the install |
-| **Thu** | Software Deployment & Commissioning | Power-on and boot all systems; install/configure software; configure networking and connectivity; integrate with customer systems; execute functional tests; run end-to-end commissioning procedures; resolve issues found during testing |
-| **Fri** | Validation, Training & Handoff | Complete acceptance testing; resolve punch list items; deliver operator training; hand over documentation and credentials; customer acceptance walkthrough and sign-off; pack up staging area; post-deployment status report to internal team |
+| **Mon** | Discovery & Architecture | Stakeholder kickoff with customer ML/platform teams; understand business problem and success criteria; review available data sources and systems; define evaluation metrics; present proposed architecture; align on phased delivery plan |
+| **Tue** | Infrastructure & Data Pipeline | Provision GPU compute and Kubernetes; set up model serving infrastructure; connect to customer data sources; build document ingestion pipeline; configure vector DB and embedding pipeline; validate data flow end-to-end |
+| **Wed** | AI Application Build | Deploy models (open-source or API); build RAG pipeline: chunking, embedding, retrieval, reranking, generation; configure system prompts and few-shot examples; integrate with customer systems via APIs/MCP; implement guardrails |
+| **Thu** | Evaluation & Optimization | Build eval framework with golden sets; run LLM-as-judge evaluation; red-team for injection/jailbreak/PII; load test for latency and throughput; iterate on prompt engineering and retrieval tuning; optimize cost and latency |
+| **Fri** | Demo, Go-Live & Handoff | Stakeholder demo with live interaction; present evaluation results and metrics; resolve remaining issues; set up production monitoring and alerts; hand off documentation and credentials; conduct knowledge transfer session; plan pilot phase |
 
-### Remote Support Week (Between Deployments)
+### Remote Week (Between Deployments)
 
 | Day | Theme | Key Activities |
 |-----|-------|---------------|
-| **Mon** | Issue Triage & Planning | Review open tickets and customer issues; prioritize; follow up on escalations from previous week; plan next deployment logistics |
-| **Tue** | Remote Support & Engineering Interface | Provide remote troubleshooting to customer sites; file bugs and feature requests with engineering; review deployment playbook updates |
-| **Wed** | Documentation & Tooling | Update deployment docs and checklists; pre-configure hardware for next deployment in lab; write automation scripts |
-| **Thu** | Meetings & Knowledge Sharing | Internal syncs with engineering on field feedback; cross-team deployment reviews; training/meetings with customer success or sales |
-| **Fri** | Prep & Wrap-Up | Finalize next deployment packing list; update personal notes/lessons learned; catch up on tickets; prepare travel logistics |
+| **Mon** | Issue Triage & Monitoring | Review production dashboards and alerts; triage open issues; provide remote debugging support; follow up on customer questions |
+| **Tue** | Engineering Feedback | File bugs and feature requests with Research/Product; contribute eval data to model improvement; review new model versions against customer workloads |
+| **Wed** | Playbook & Tooling | Update deployment playbooks and templates; improve reusable components; write automation scripts; contribute to internal library |
+| **Thu** | Meetings & Knowledge Share | Sync with internal teams on field feedback; FDE team pattern sharing session; customer success alignment; product roadmap review |
+| **Fri** | Prep & Learning | Prepare for next deployment: data exploration, architecture planning; study new AI tools and techniques; catch up on industry developments |
 
 ---
 
@@ -235,27 +264,31 @@ The role decomposes into six pillars:
 
 | Domain | Skills | Tools & Technologies |
 |--------|--------|---------------------|
-| **Mechanical** | Mounting & bracket fabrication; Cable routing & strain relief; Torque specifications; Enclosure assembly & sealing; Basic machining (drill, tap, cut) | Hand tools, Power tools (drill, impact driver, grinder), Cable ties, Conduit & flex, Torque wrenches, Crimpers & strippers |
-| **Electrical** | Wiring & harness termination; Power system design & installation; Safety circuit validation; Electrical code awareness (NEC/IEC); Sensor interfacing; Grounding & bonding | Multimeter, Oscilloscope, Wire strippers/crimpers, Terminal blocks, Fuses/relays, E-Stop components, Power supplies, Signal generators |
-| **Software/OS** | Linux system administration; Shell scripting (Bash); Python scripting; Containerization (Docker); Service management (systemd); Package management; Log analysis; Basic CI/CD understanding | Ubuntu/Debian/Rocky, Docker/Kubernetes, Bash, Python, Git, SSH, systemd, journalctl, top/htop, jq, grep/sed/awk |
-| **Networking** | IP addressing & subnetting; VLAN configuration; Routing basics; Firewall rules (iptables/nftables); DNS/DHCP; Wireless networking (Wi-Fi, cellular, radio); VPN & secure tunnels; Packet analysis; Network troubleshooting | Cisco/Juniper CLI, ip/ifconfig, ping/traceroute, tcpdump/Wireshark, nmap, netcat, OpenVPN/WireGuard, Wi-Fi analyzers, Cellular modems |
-| **Safety & Compliance** | Lockout/Tagout (LOTO); E-Stop system validation; Risk assessment; PPE requirements; Site safety protocols; Regulatory awareness (OSHA, CE, UL) | LOTO equipment, Multimeters, Safety relay testers, PPE (hard hat, gloves, safety glasses, hearing protection) |
-| **Monitoring & Observability** | System health monitoring; Log aggregation; Alert configuration; Performance benchmarking; Telemetry collection | Prometheus, Grafana, ELK Stack, Datadog, custom dashboards, uptime tools |
+| **AI/ML Engineering** | LLM prompting & engineering; RAG architecture; agentic workflows; fine-tuning (SFT, DPO, RFT); evaluation design; model selection & routing; guardrails & safety | OpenAI API, Anthropic API, Google Gemini, vLLM, SGLang, TensorRT-LLM, Hugging Face, LangGraph, LangChain, CrewAI, LlamaIndex, MCP |
+| **Inference & Optimization** | Model serving; quantization (AWQ, GPTQ, FP8); KV cache optimization; batching; speculative decoding; GPU profiling | vLLM, TGI, Ollama, llama.cpp, NVIDIA NIM, Triton, KServe, Ray Serve |
+| **Data & Vector Systems** | Document ingestion & parsing; chunking strategies; embedding models; vector search; hybrid retrieval; reranking; data quality | Pinecone, Weaviate, Qdrant, Milvus, Chroma, pgvector, Elasticsearch, Cohere Rerank, BGE |
+| **Software Engineering** | Python (advanced); TypeScript/JavaScript; API design (REST, gRPC, GraphQL); async programming; testing; CI/CD | Python, FastAPI, Node.js, React, pytest, GitHub Actions, ArgoCD |
+| **Cloud & Infrastructure** | Kubernetes; GPU provisioning; networking; infrastructure-as-code; secret management; observability | AWS, GCP, Azure, Kubernetes, Terraform, Helm, Docker, Prometheus, Grafana |
+| **MLOps & Observability** | Model registry; experiment tracking; LLM tracing; drift detection; quality monitoring; cost tracking | MLflow, Weights & Biases, LangSmith, Langfuse, Arize, Phoenix |
+| **Data Engineering** | ETL/ELT pipelines; API integration; database querying; stream processing; data governance | Apache Airflow, dbt, Spark, SQL, Kafka, customer APIs |
+| **Responsible AI & Safety** | Red-teaming; guardrails implementation; PII detection; bias assessment; content filtering; compliance | NeMo Guardrails, Llama Guard, Presidio, Fairlearn, LLM Guard |
+| **Enterprise Integration** | Identity/SSO; enterprise API patterns; legacy system integration; data connectivity | Okta, Azure AD, Salesforce, ServiceNow, SAP, SharePoint, Confluence |
+| **Networking & Security** | VPC design; TLS/mTLS; VPN; firewall rules; zero-trust networking | AWS VPC, GCP VPC, WireGuard, Cloudflare, Istio |
 
 ### Soft Skills
 
 | Skill | Why It Matters |
 |-------|---------------|
-| **Communication** | Translate complex technical concepts for non-technical stakeholders; explain issues clearly under pressure |
-| **Autonomy & Self-Direction** | Make independent technical decisions on-site without engineering support |
-| **Customer Empathy** | Understand customer pain points; manage expectations; build trust through competence |
-| **Adaptability** | Handle unexpected site conditions, changing requirements, and ambiguous situations |
-| **Problem-Solving Under Pressure** | Debug critical issues with operators/customers waiting; stay methodical when systems are down |
-| **Teaching & Enablement** | Train customer teams with varying technical backgrounds; create clear documentation |
-| **Cross-Functional Collaboration** | Work effectively with engineering, sales, PM, support, and customer teams simultaneously |
-| **Attention to Detail** | One miswired connection or misconfigured IP can bring down the entire system |
-| **Time & Project Management** | Manage deployment schedules, coordinate logistics, meet deadlines across multiple sites |
-| **Written Documentation** | Produce clear, actionable docs that someone else can follow without you present |
+| **Technical Communication** | Explain RAG failure modes to a VP; discuss token economics with a CFO; debug with an ML engineer |
+| **Customer Empathy** | Understand the business problem behind the AI ask; manage expectations about model capabilities and limitations |
+| **Autonomy & Judgment** | Make architecture decisions on-site without engineering support; know when to escalate vs. solve independently |
+| **Ambiguity Tolerance** | Navigate undefined requirements, evolving customer needs, and fast-moving model capabilities |
+| **Problem-Solving Under Pressure** | Debug production issues when customer executives are watching; stay methodical during incidents |
+| **Teaching & Enablement** | Train customer teams on AI operations; explain prompting strategies; build confidence in the system |
+| **Cross-Functional Collaboration** | Work with Research, Product, Sales, Customer Success, and customer teams simultaneously |
+| **Executive Presence** | Present architecture decisions and tradeoffs to C-suite; demo confidently in high-stakes meetings |
+| **Product Thinking** | Translate customer needs into product features; see beyond the immediate ask to the underlying workflow |
+| **Written Documentation** | Produce clear architecture docs, runbooks, and eval reports that others can follow without you |
 
 ---
 
@@ -265,86 +298,104 @@ The role decomposes into six pillars:
 
 | Team | Interaction Pattern | Topics |
 |------|-------------------|--------|
-| **Product Engineering** | Continuous feedback loop | Bug reports, feature requests, design improvements, build/debug support |
-| **Project Management** | Per-deployment coordination | Schedules, milestones, scope, risk management |
-| **Sales / Business Development** | Pre-sales & deal support | Technical validation, POC support, RFP/RFI responses, site feasibility |
-| **Customer Success / Support** | Ongoing account support | Handoffs, escalation paths, customer satisfaction |
-| **Hardware Engineering** | Per-deployment & design feedback | Hardware issues, installation feedback, design for manufacturability |
-| **Manufacturing / QA** | Pre-deployment staging | End-of-line testing, burn-in, shipping preparation |
+| **Research / Model Team** | Continuous eval feedback loop | Model failure modes, capability gaps, eval data, model selection guidance |
+| **Product / Platform** | Feature requests, roadmap input | SDK improvements, platform gaps, integration needs, UX feedback |
+| **ML Platform / MLOps** | Infrastructure collaboration | Inference stack, model registry, CI/CD, observability standards |
+| **Safety / Trust & Safety** | Red-teaming, guardrails | Safety review, content policy, responsible AI, compliance requirements |
+| **Solutions Architecture** | Joint discovery, handoff | Architecture review, reference designs, POC scoping |
+| **Sales / Business Development** | Pre-sales technical support | Technical validation, POC demos, RFP responses, deal support |
+| **Customer Success** | Account-level coordination | Deployment handoffs, escalation paths, customer satisfaction |
 | **Leadership** | Periodic reporting | Deployment status, field trends, resource needs, strategic input |
 
 ### External Stakeholders
 
 | Stakeholder | Interaction Pattern | Topics |
 |-------------|-------------------|--------|
-| **Customer Technical Team** | Daily during deployment | Installation coordination, technical decisions, acceptance testing |
-| **Customer Operations Team** | During training & handoff | Training, SOPs, operational procedures |
-| **Customer IT Team** | During setup & integration | Network access, security review, credential management |
-| **Customer Leadership** | Kickoff & sign-off | Timeline, milestones, expectations, acceptance |
-| **Contractors / Installers** | Per-deployment | Supervision, quality checks, coordination |
-| **Dealers / Partners** | Enablement & support | Training, documentation, independent install capability |
+| **Customer ML/Data Engineering** | Daily during deployment | Data pipelines, model integration, eval design, debugging |
+| **Customer Platform/IT** | Setup and integration | Infrastructure, networking, security review, identity, compliance |
+| **Customer Executive Sponsors** | Kickoff, demo, sign-off | Business outcomes, metrics, roadmap alignment, risk |
+| **Customer End-Users** | Feedback collection | UX feedback, workflow fit, quality perception, adoption barriers |
+| **Customer Legal/Compliance** | Compliance review | Data privacy, AI governance, EU AI Act, usage policies |
+| **Third-Party Vendors** | Integration coordination | Model APIs, vector DBs, data connectors, evaluation tools |
 
 ---
 
-## 7. Deployment Lifecycle Phases
+## 7. AI Deployment Lifecycle Phases
 
 ```
 Phase 0        Phase 1        Phase 2        Phase 3        Phase 4        Phase 5        Phase 6
-Pre-Sales  →   Site       →   Logistics  →   On-Site    →   Commission→   Handoff   →   Sustain-
-& POC          Survey &        & Staging     Installation   & Validation   & Training     ment &
-Support        Planning                                     & Go-Live      & Hypercare    Support
+Discovery  →   Data &       →   Infra &     →   Model &    →   Eval &     →   Go-Live   →   Production
+& Scoping      Readiness       Model Deploy   RAG/Agent     Red-Team      & Handoff    Optimization
+                   Assessment     Stack Build    Build         & Load Test
 ```
 
 | Phase | FDE Role | Key Outputs |
 |-------|----------|-------------|
-| **0 — Pre-Sales & POC** | Technical advisor; site feasibility assessment; POC setup and validation | POC results, technical proposal inputs, feasibility assessment |
-| **1 — Site Survey & Planning** | Site assessment; deployment plan creation; risk identification | Site survey report, deployment plan, risk register, BOM validation |
-| **2 — Logistics & Staging** | Pre-configure and test systems in lab; prepare shipping | Staged and tested hardware, pre-configured software, shipping docs |
-| **3 — On-Site Installation** | Physical installation of all hardware and initial software deployment | Installed system, as-built documentation, cable schedules |
-| **4 — Commissioning & Validation** | End-to-end testing; performance validation; safety verification | Test results, acceptance documentation, performance baselines |
-| **5 — Handoff & Training** | Customer training; documentation handover; formal sign-off | Signed acceptance, trained operators, complete documentation package |
-| **6 — Sustaining Support** | Remote support; preventive maintenance; continuous improvement | Resolved issues, updated docs, product feedback, improved playbooks |
+| **0 — Discovery & Scoping** | Technical discovery, architecture design, success metrics definition | Architecture doc, success criteria, phased plan, risk register |
+| **1 — Data & Readiness Assessment** | Data exploration, quality assessment, integration point mapping | Data readiness report, integration plan, baseline metrics |
+| **2 — Infrastructure & Model Deploy** | GPU provisioning, inference stack setup, model deployment | Running inference stack, model endpoints, monitoring baseline |
+| **3 — RAG/Agent Build** | RAG pipeline construction, agentic workflow development, guardrails | Working AI application, integration with customer systems |
+| **4 — Eval & Red-Team** | Evaluation framework, red-teaming, load testing, optimization | Eval results, red-team report, performance benchmarks |
+| **5 — Go-Live & Handoff** | Production deployment, monitoring setup, customer training | Production system, trained team, documentation package |
+| **6 — Production Optimization** | Monitoring, debugging, continuous improvement, feedback loop | Resolved issues, optimized performance, product feedback |
 
 ---
 
-## 8. Deployment Context Variations
+## 8. AI Deployment Context Variations
 
 > The core responsibilities above apply universally. However, the emphasis shifts based on deployment context:
 
-### Greenfield vs. Brownfield
+### RAG vs. Fine-Tuning vs. Agentic
 
-| Aspect | Greenfield (New Site) | Brownfield (Existing Site) |
-|--------|----------------------|---------------------------|
-| Planning intensity | Full site survey from scratch | Must work within existing infrastructure constraints |
-| Integration complexity | Lower — build to spec | Higher — integrate with legacy systems, unknown variables |
-| Customer coordination | Moderate | High — negotiate downtime windows, existing team buy-in |
-| Risk profile | More predictable | More variable — hidden conditions common |
+| Aspect | RAG (Retrieval-Augmented Generation) | Fine-Tuning (SFT/DPO/RFT) | Agentic (Multi-Step) |
+|--------|-------------------------------------|--------------------------|---------------------|
+| Primary challenge | Data quality, retrieval accuracy | Dataset quality, training compute | Orchestration, tool reliability |
+| Data requirements | Large corpus, structured documents | Labeled training examples, preference pairs | Tool definitions, workflow specs |
+| Evaluation focus | Faithfulness, relevance, retrieval quality | Task accuracy, generalization, regression | Task completion, step efficiency, error recovery |
+| Infrastructure | Vector DB, embedding pipeline, inference | GPU training cluster, training framework | Inference + tool execution, state management |
+| Iteration speed | Fast (update index, change prompts) | Slow (retrain cycle) | Medium (modify workflow, update tools) |
 
-### Single-System vs. Multi-System Integration
+### Cloud vs. Edge vs. Hybrid
 
-| Aspect | Single System | Multi-System Integration |
-|--------|--------------|-------------------------|
-| Scope | One product deployed | Multiple products/components working together |
-| Testing | Isolated functional testing | Cross-system integration testing, data flow validation |
-| Troubleshooting | Contained | Must isolate issues across system boundaries |
-| Customer interfaces | One POC | Multiple customer teams and IT systems |
+| Aspect | Cloud | Edge | Hybrid |
+|--------|-------|------|--------|
+| GPU availability | Elastic, on-demand | Constrained (Jetson, Orin) | Split workload |
+| Latency requirements | Flexible | Strict (real-time) | Mixed |
+| Data gravity | Data in cloud | Data on-prem | Synchronized |
+| Connectivity | Always-on | Intermittent/air-gapped | Sync + fallback |
+| Model selection | Larger models OK | Smaller/quantized models | Route by context |
 
-### Customer-Operated vs. Contractor-Installed
+### Open vs. Closed Models
 
-| Aspect | Customer Operates | Contractor Installs |
-|--------|------------------|-------------------|
-| Training depth | FDE trains customer team thoroughly | FDE trains contractors; contractors deliver to customer |
-| Quality control | FDE directly responsible | FDE supervises and validates contractor work |
-| Long-term support | Direct to customer | Through contractor or both |
+| Aspect | Open-Source (Llama, Mistral, Qwen) | Closed/API (GPT, Claude, Gemini) |
+|--------|------------------------------------|--------------------------------|
+| Customization | Fine-tuning, full control | Prompt engineering, limited |
+| Cost model | Infrastructure + ops | Per-token API pricing |
+| Data privacy | Full control (on-prem) | Data sent to provider |
+| Latency | Tunable (batching, quantization) | Network-dependent |
+| Capability | Rapidly improving | Latest frontier capabilities |
+| Operations burden | Higher (self-managed) | Lower (managed API) |
 
-### Regulated vs. Non-Regulated Environments
+### POC → Pilot → Production
 
-| Aspect | Non-Regulated | Regulated (Safety-Critical, Defense, Medical, etc.) |
-|--------|--------------|------------------------------------------------------|
-| Documentation | Standard SOPs | Formal procedures, traceability, change control |
-| Validation | Functional testing | Formal V&V, audit trails, compliance evidence |
-| Safety requirements | Basic site safety | Formal safety cases, hazard analysis, redundancy |
-| Deployment pace | Agile, iterate | Gate reviews, formal sign-offs, extensive testing |
+| Aspect | POC (Proof of Concept) | Pilot | Production |
+|--------|----------------------|-------|------------|
+| Scope | Single use case, narrow data | Real users, representative data | Full workload, SLAs |
+| Infrastructure | Ephemeral, minimal | Pre-production, realistic | Production-grade, monitored |
+| Evaluation | Informal, demo-driven | Structured eval, golden sets | Continuous eval, regression testing |
+| Success criteria | "Does it work at all?" | "Does it work well enough?" | "Does it meet SLOs reliably?" |
+| FDE involvement | High (hands-on build) | Medium (guidance + review) | Low (monitoring + optimization) |
+
+### Vertical: Legal / Code / Support / R&D
+
+| Vertical | Unique Aspects |
+|----------|---------------|
+| **Legal** | Citation accuracy, jurisdiction awareness, privilege protection, contract analysis, e-discovery compliance |
+| **Software Engineering** | Code generation, repo indexing, AST-aware retrieval, CI/CD integration, developer experience |
+| **Customer Support** | Ticket routing, response drafting, knowledge base freshness, CSAT measurement, agent augmentation |
+| **R&D / Research** | Literature review, hypothesis generation, experimental design, technical depth, citation management |
+| **Healthcare** | HIPAA compliance, clinical accuracy, medical terminology, regulatory review, safety-critical validation |
+| **Finance** | Regulatory compliance, audit trails, hallucination tolerance (zero), explainability, risk management |
 
 ---
 
@@ -352,43 +403,44 @@ Support        Planning                                     & Go-Live      & Hyp
 
 | Level | Scope | Autonomy | Typical Travel | Key Differentiators |
 |-------|-------|----------|---------------|---------------------|
-| **Junior FDE** (0-2 yrs) | Assists on deployments; executes defined tasks | Low — follows guidance from senior FDE | 30-50% | Learns the product and processes; builds foundational field skills; shadowing and supervised execution |
-| **FDE** (2-4 yrs) | Owns end-to-end deployments independently | Medium — makes most technical decisions on-site | 50-70% | Independent deployment ownership; handles standard troubleshooting; represents company to customer |
-| **Senior FDE** (4-7 yrs) | Leads complex, multi-site, or first-of-kind deployments | High — architecture decisions, novel solutions | 50-70% | Mentors junior FDEs; authors playbooks; interfaces directly with engineering on product direction; handles escalated issues |
-| **Lead / Principal FDE** (7+ yrs) | Program-level ownership; shapes deployment strategy | Very High — sets standards and methodology | 30-50% | Defines deployment framework; drives tooling/process improvements; cross-functional leadership; industry representation |
+| **Junior FDE** (0-2 yrs) | Assists on deployments; executes defined tasks | Low — follows guidance from senior FDE | 30-50% | Learns the AI stack and deployment processes; builds foundational skills; shadowing and supervised execution |
+| **FDE** (2-5 yrs) | Owns end-to-end deployments independently | Medium — makes most technical decisions on-site | 50-70% | Independent deployment ownership; designs RAG/agent architecture; handles standard troubleshooting; represents company to customer |
+| **Senior FDE** (5-8 yrs) | Leads complex, multi-site, or first-of-kind deployments | High — architecture decisions, novel solutions | 50-70% | Mentors junior FDEs; authors playbooks; interfaces directly with Research on model improvements; handles escalated issues; shapes product roadmap |
+| **Lead / Principal FDE** (8+ yrs) | Program-level ownership; shapes deployment strategy | Very High — sets standards and methodology | 30-50% | Defines deployment framework; drives tooling/process improvements; cross-functional leadership; industry representation; influences model/product direction |
 
 ### Skill Progression Trajectory
 
 ```
 Junior FDE                          Senior FDE                        Principal FDE
     │                                   │                                  │
-    ├─ Execute installation steps       ├─ Design installation approach   ├─ Define deployment standards
-    ├─ Follow existing playbooks        ├─ Author new playbooks           ├─ Build deployment framework
-    ├─ Escalate issues to engineering   ├─ Diagnose root cause in field   ├─ Predict failure modes pre-deployment
-    ├─ Learn one product deeply         ├─ Master product suite           ├─ Shape product requirements from field
-    └─ Follow customer training plans   ├─ Create training programs       └─ Set company-wide FDE strategy
+    ├─ Deploy standard RAG              ├─ Design RAG/agent architecture  ├─ Define deployment standards
+    ├─ Run eval scripts                 ├─ Build eval frameworks          ├─ Build deployment methodology
+    ├─ Debug retrieval failures         ├─ Diagnose cross-stack issues   ├─ Predict failure modes pre-deployment
+    ├─ Learn inference stack            ├─ Optimize latency and cost     ├─ Shape model/product roadmap
+    ├─ Follow deployment playbooks      ├─ Author new playbooks          ├─ Influence industry best practices
+    └─ Execute under guidance           ├─ Lead POC-to-production        └─ Set company-wide FDE strategy
                                         └─ Mentor junior FDEs
 ```
 
 ---
 
-## 9. Industry Context Notes
+## 10. Industry Context: AI Company Types
 
-> The FDE role spans industries. While the core is the same, the flavor changes:
+> The AI FDE role manifests differently depending on the company type:
 
-| Industry | Typical Systems | Unique Aspects |
-|----------|----------------|----------------|
-| **Robotics / Autonomy** | Robotic arms, AMRs, unmanned vehicles, edge compute | ROS 2, safety-certified systems, physical interaction with machinery |
-| **Defense / Aerospace** | Sensors, C2 systems, ruggedized compute | Security clearances, austere environments, MIL-SPEC hardware, radio/mesh networking |
-| **Energy / Utilities** | Solar inverters, grid systems, SCADA | Regulatory compliance, high-voltage safety, utility interconnection standards |
-| **Mining / Construction** | Autonomy on heavy equipment, telemetry | Extreme environments (dust, heat, vibration), heavy machinery safety, remote sites |
-| **Public Safety** | Drone detection, video systems, command center tech | Law enforcement coordination, RF/airspace regulations, real-time operations |
-| **Industrial Automation** | PLCs, robotic cells, sensors, HMIs | OT networking (Modbus, PROFINET), industrial safety standards, factory environments |
-| **Telecom / Network** | Base stations, network equipment, fiber | RF knowledge, tower climbing, telecom standards, high-volume rollout |
+| Company Type | Examples | FDE Focus |
+|--------------|----------|-----------|
+| **Foundation Model Labs** | OpenAI, Anthropic, Google DeepMind, Cohere, Mistral | Model deployment, API integration, eval design, safety red-teaming, customer-specific fine-tuning, frontier capability access |
+| **AI Platform** | Databricks, Dataiku, Scale AI, Weights & Biases, LangChain | Platform onboarding, custom pipeline building, model training on platform, MLOps setup, integration with customer stack |
+| **Enterprise AI Apps** | Glean, Harvey, Sierra, Moveworks, Abridge, Perplexity | Vertical-specific RAG/agents, workflow integration, domain customization, end-user training, adoption metrics |
+| **Cloud Providers** | AWS (Bedrock), Azure (AI Foundry), GCP (Vertex AI) | Platform deployment, GPU optimization, enterprise integration, migration from competitor platforms, reference architectures |
+| **Consulting / SIs** | Deloitte, Accenture, Palantir, McKinsey (QuantumBlack) | Multi-client, varied stacks, accelerator development, executive engagement, change management |
+| **AI-Native Startups** | Fireworks, Together AI, Groq, Baseten, Modal | Inference optimization, model serving, cost reduction, performance benchmarking, developer experience |
+| **Industry-Specific AI** | Abridge (healthcare), Harvey (legal), Codeium (code), Jasper (marketing) | Domain data pipelines, compliance, specialized evaluation, workflow-specific agents, vertical GTM |
 
 ---
 
-## 10. Personal Reflection / Customization
+## 11. Personal Reflection / Customization
 
 > Use this section to tailor the reference to your own context.
 
@@ -396,6 +448,36 @@ Junior FDE                          Senior FDE                        Principal 
 - [ ] Area 1: ________________________________
 - [ ] Area 2: ________________________________
 - [ ] Area 3: ________________________________
+
+### Model Deployment Checklist (Customized)
+- [ ] Model selected and benchmarked for use case
+- [ ] Quantization and serving parameters optimized
+- [ ] Fallback model configured
+- [ ] Inference latency validated against SLO
+- [ ] Cost per request measured and within budget
+
+### RAG Architecture Decision Record Template
+| Decision | Options Considered | Choice | Rationale | Date |
+|----------|-------------------|--------|-----------|------|
+| Vector DB | | | | |
+| Embedding Model | | | | |
+| Chunking Strategy | | | | |
+| Reranker | | | | |
+| Retrieval Mode | | | | |
+
+### Eval Framework Template
+| Metric | Target | Current | Measurement Method | Status |
+|--------|--------|---------|-------------------|--------|
+| Faithfulness | | | LLM-as-judge | |
+| Relevance | | | LLM-as-judge + human | |
+| Latency (p95) | | | Tracing | |
+| Cost/request | | | Token accounting | |
+| Hallucination rate | | | Golden set regression | |
+
+### Red-Teaming Findings Log
+| Date | Attack Type | Vulnerability Found | Mitigation | Status |
+|------|------------|-------------------|------------|--------|
+| | | | | |
 
 ### Skill Gaps to Address
 | Skill | Current Level | Target Level | Action Plan |
@@ -405,14 +487,11 @@ Junior FDE                          Senior FDE                        Principal 
 | | | | |
 
 ### Key Lessons Learned (Field Notes)
-| Date | Site/Situation | Lesson | Action Taken |
-|------|---------------|--------|--------------|
+| Date | Customer/Situation | Lesson | Action Taken |
+|------|-------------------|--------|--------------|
 | | | | |
 | | | | |
-
-### My Deployment Checklist (Customized)
-- [ ] (Add site-specific items here)
 
 ---
 
-*This document is a living reference. Update it as you gain field experience and as the role evolves.*
+*This document is a living reference. Update it as you gain field experience and as the AI FDE role evolves.*
