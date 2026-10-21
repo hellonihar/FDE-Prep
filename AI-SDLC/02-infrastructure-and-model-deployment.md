@@ -258,3 +258,4 @@ Set up **before** the app exists, so Phase 3 and 6 inherit it:
 - Previous: [Phase 1 — Data & Readiness Assessment](01-data-readiness-assessment.md)
 - Next: [Phase 3 — RAG / Agent Build](03-rag-agent-build.md)
 - Source reference: [FDE-Responsibilities.md — Pillars B (Infrastructure) and C (Model Deployment)](../FDE-Responsibilities.md) and [§8 Deployment Context Variations](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar B](../FDE-Responsibilities.md) expands the 18 infrastructure tasks as step-by-step procedures with templates, the same five worked business cases (Northwind Mutual, Meridian Bank, Corvid, St. Aldwyn Health, Halden & Rowe), and seven publicly documented reference cases.

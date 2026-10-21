@@ -1,6 +1,6 @@
 # Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 2.1
+**Version:** 2.2
 **Last Updated:** 2026-10-21
 **Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
@@ -51,7 +51,7 @@ The role decomposes into seven pillars:
 
 #### Case Index
 
-Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end.
+Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure) with their infrastructure shape fixed there.
 
 | # | Case | Sector & Scale | The Ask | Hard Constraint | Instructive Because |
 |---|------|----------------|---------|-----------------|--------------------|
@@ -548,15 +548,31 @@ These are publicly reported cases used throughout Pillar A. They are cited for t
 
 ### Pillar B: Infrastructure & GPU/Edge Provisioning
 
+> **Phase playbook:** [AI-SDLC Phase 2 — Infrastructure & Model Deployment](AI-SDLC/02-infrastructure-and-model-deployment.md) covers the same ground as a gated workflow with a capacity worksheet, tooling reference, and load-test plan. This section is the *how* — procedures, templates, and worked cases.
+
 <details>
-<summary><b>18 core tasks</b> (click to expand)</summary>
+<summary><b>18 core tasks — detailed breakdown</b> (click to expand)</summary>
+
+#### Case Index
+
+The same five cases from Pillar A carry into infrastructure, with their infrastructure shape fixed. Read this table before sizing anything.
+
+| # | Case | Infrastructure Shape | Volume Profile | Binding Constraint | Teaches |
+|---|------|--------------------|----------------|--------------------|---------|
+| **1** | **Northwind Mutual** | Customer-managed VPC, US region, private model endpoint | ~110 claims/day interactive + nightly batch re-embed | State insurance rules; medical PII in claim files | Sizing for a bimodal workload, not an average |
+| **2** | **Meridian Bank** | On-prem Kubernetes, multi-node GPU pool, self-hosted inference | 4.2M chunks indexed; steady interactive + large backlog batch | No external API; SEC/FINRA; 90-day credential rotation | Building a platform the customer can actually run |
+| **3** | **Corvid** | Managed serverless inference + container service, two regional stacks | 12k tickets/day, peak-to-average 8x, strict $0.04/request | 4s latency ceiling; EU residency; no ops staff | Not introducing Kubernetes to a team that has none |
+| **4** | **St. Aldwyn Health** | On-prem hospital network + one edge site, air-gapped | ~60 summaries/day, plus an ED satellite site | PHI never leaves network; no internet egress; GPU lead time 8–12 weeks | Edge, air-gap, and the cost of the procurement path |
+| **5** | **Halden & Rowe** | Single on-prem workstation, CPU inference, no cluster | ~40 requests/day peak | Confidentiality duty; no external API | The GPU you should not buy |
+
+#### Task Checklist
 
 - [ ] Provision and configure GPU compute: cloud instances (A100, H100, L40S, T4), on-prem clusters, or edge devices (Jetson Orin, HEBO)
 - [ ] Deploy and manage Kubernetes clusters for model serving (EKS, GKE, AKS, OpenShift)
 - [ ] Configure model serving infrastructure: KServe, KubeRay, Triton Inference Server, Ray Serve
 - [ ] Set up inference servers: vLLM, SGLang, TensorRT-LLM, TGI (Text Generation Inference), Ollama, llama.cpp
 - [ ] Configure GPU scheduling and resource management: MIG, time-slicing, NVIDIA GPU Operator, Run:ai
-- [ ] Establish networking: VPC design, private endpoints, VPC peering, service mesh, load balancers
+- [ ] Establish networking: VPC design, private endpoints, VPC peering, service meshes, load balancers
 - [ ] Configure TLS/mTLS, certificate management, and service-to-service authentication
 - [ ] Set up private AI model endpoints (Azure Private Endpoint, AWS PrivateLink, GCP Private Service Connect)
 - [ ] Configure model registry and artifact management (MLflow Model Registry, Vertex AI Model Registry, Weights & Biases)
@@ -569,6 +585,445 @@ These are publicly reported cases used throughout Pillar A. They are cited for t
 - [ ] Configure 5G/LTE/Wi-Fi connectivity for edge deployments; test failover scenarios
 - [ ] Implement secret management: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, Kubernetes Secrets
 - [ ] Validate infrastructure: GPU health checks, network throughput, storage IOPS, cold-start benchmarks
+
+---
+
+#### B1. Provision and configure GPU compute
+
+**Goal.** Acquire the right amount of compute, in the right place, by the date it is actually needed — and know the bill before it arrives.
+
+**How to do it.**
+
+1. **Start from measured demand, not from a GPU wishlist.** You need peak concurrent requests, tokens in and out per request, and the target latency. Phases 0–1 supply these. If you do not have them, provision for a POC, instrument it, and size properly afterwards. A GPU SKU chosen in a meeting is a guess with a monthly invoice attached.
+2. **Do the memory arithmetic first.** Per sequence, the KV cache is roughly `2 × layers × KV-heads × head-dim × bytes-per-element × sequence-length`, and weights are `params × bytes-per-weight`. The number of sequences a GPU can hold sets its concurrency, and concurrency sets the replica count for a target throughput. This is a five-minute calculation that determines the entire design — and it is the one teams skip.
+3. **Pick the GPU class by workload shape.** H100 and A100 for maximum throughput per dollar at scale; L40S and L4 for latency-sensitive mid-size models; T4 for cheap, low-throughput batch and embedding work; MIG on A100/H100 when you need hard isolation between tenants or between interactive and batch traffic.
+4. **Treat lead time as a first-class constraint.** Cloud on-demand is hours; reserved capacity is weeks; on-prem is a quarter; edge hardware is months. Never choose the technical option before checking the date on which it can exist. A superior design that arrives after the deadline is a failed design.
+5. **Compare the three deployment shapes and state the break-even.** Managed API versus a single self-hosted node versus a multi-node cluster, at your actual volume. Write the number down — a break-even you can quote is a break-even you can defend later when the invoice arrives.
+6. **Decide the tenancy model.** Single-tenant, shared with routing, or dedicated per environment. Dedicated production capacity is more expensive and is frequently a regulatory requirement rather than an engineering preference.
+7. **Write the capacity plan as a document:** instance type, replica count, utilisation target, autoscaling bounds, monthly cost, and the trigger for adding the next unit. The trigger matters more than the number — it turns capacity planning from a guessing game into a rule.
+
+**Artifacts.** Capacity worksheet (volume → tokens/sec → replicas → GPU type → $/month → $/request); procurement checklist with lead times per option; tenancy decision record.
+
+**Worked example — Halden & Rowe.** The entire engagement was roughly 40 requests per day at peak: a 220-lawyer firm running clause-flagging across a handful of live matters. The initial proposal from the infrastructure side was a dedicated H100 cluster. The correct answer was the opposite — a single on-premises workstation running an 8B open-weight model at 4-bit through llama.cpp on CPU, with a second VM as the warm failover. The GPU question answered itself once the volume was measured, and the money saved paid for the training sessions for the 30 junior lawyers, which was worth more to the firm than any cluster.
+
+**Worked example — Northwind Mutual.** 40,000 claims a year is only ~110 claims per working day, so interactive traffic is trivial — but the nightly re-embedding of changed claim files is a genuine batch workload that will saturate a single GPU for hours. Two different shapes, so two different pools: a small always-on interactive endpoint and a scheduled batch pool. Sizing both from the average would have been wrong in both directions.
+
+**Watch out for.** Choosing the GPU from the benchmark chart rather than from the workload. Forgetting that the KV cache, not the weights, is what caps concurrency at long context lengths. Ordering hardware after the plan is signed. Provisioning for a peak that lasts four minutes a day and paying for it every hour. Assuming cloud lead times are hours for every instance family — they are not.
+
+**Done when.** The capacity worksheet shows measured demand through to monthly cost and $/request, the procurement path has a confirmed date, and the trigger for scaling up is written down.
+
+---
+
+#### B2. Deploy and manage Kubernetes clusters for model serving
+
+**Goal.** Stand up an orchestration layer only if the customer's platform can run it — and never hand them a platform nobody owns.
+
+**How to do it.**
+
+1. **Ask the question first: does the customer run Kubernetes today, with a team that owns it?** If not, do not introduce it. Every platform you add is a platform the customer must staff, patch, and eventually explain to an auditor. For most mid-size customers, a managed container service plus a managed inference endpoint is a month of work and a year of on-call cheaper.
+2. **If Kubernetes is right, use the managed control plane** (EKS, GKE, AKS, OpenShift) rather than self-managing etcd, and get node groups with the right instance types, labels, and taints for GPU workloads.
+3. **Design the tenancy boundaries:** separate namespaces per environment and per trust level, NetworkPolicies default-deny with explicit allows, and separate clusters wherever the regulatory boundary requires it. Namespace separation is not a security boundary for an auditor; cluster separation usually is.
+4. **Plan the GPU-specific bits:** the NVIDIA device plugin, the GPU Operator for driver lifecycle, and node autoscaling with GPU capacity types. A GPU node is not fungible with a CPU node, and the scheduler does not know that unless you tell it.
+5. **Decide the ingress:** a stable internal service or gateway that fronts the serving pods, with the public load balancer outside the cluster if the customer's edge requirements demand it.
+6. **Set autoscaling bounds and answer the scale-to-zero question.** GPU nodes are expensive; scale-to-zero plus a warm floor is usually the cost lever — but it must be reconciled with the cold-start requirement from B18.
+7. **Get the cluster inside the customer's change-management and support process.** A cluster nobody patches, backs up, or upgrades is a finding waiting for an examiner to arrive.
+
+**Artifacts.** Cluster architecture (regions, node groups, namespaces, network policies); build-versus-adopt decision record; cluster lifecycle runbook (upgrade, node replacement, restore).
+
+**Worked example — Corvid.** The vendor-side plan was a Kubernetes cluster on the cloud provider. The customer's platform team had six engineers, ran everything on managed serverless containers, and had an explicit policy of not operating Kubernetes. The decision was managed serverless inference endpoints plus a small container service for the retrieval layer — no cluster. That single choice removed two weeks of platform work and an on-call burden nobody at a 340-person company could realistically carry, and it compressed the deployment from six weeks to three.
+
+**Worked example — Meridian Bank.** The opposite case, and it is the reason the question in step 1 matters. The bank already ran on-premises Kubernetes with a mature platform team and a change-advisory process, so Kubernetes was correct. It also added a mandatory two-week CAB slot to every production change, which put a floor under iteration speed — and that floor had to be planned into the schedule from day one rather than discovered during Phase 3's first prompt iteration.
+
+**Watch out for.** Introducing Kubernetes because the vendor team knows it. Treating namespaces as a compliance boundary. Forgetting the device plugin, so half the cluster cannot schedule GPU work. GPU node autoscaling with no warm pool, so every scale-up pays a full cold start. Leaving the cluster outside the customer's support model.
+
+**Done when.** There is a written decision explaining why this orchestration layer exists, who operates it, and how it fits the customer's existing support and change processes.
+
+---
+
+#### B3. Configure model serving infrastructure (KServe, KubeRay, Triton, Ray Serve)
+
+**Goal.** Choose the serving control plane that matches how many models you run and how much custom logic surrounds them.
+
+**How to do it.**
+
+1. **Separate the two layers before choosing.** The *serving runtime* (vLLM, SGLang, TensorRT-LLM, TGI) produces tokens. The *serving platform* (KServe, Ray Serve, Triton, KubeRay) schedules, scales, versions, and routes to it. They are separate decisions with separate failure modes, and conflating them is how teams end up with a heavyweight platform they do not need.
+2. **Match the platform to the complexity.** One model, one replica, one workload → run the runtime behind a gateway (LiteLLM or an API gateway) and stop there. Multi-model routing, per-model autoscaling, and canary between versions → KServe or Ray Serve. Heterogeneous model types (LLM, ranking, vision) sharing GPUs → Triton. Models too large for one GPU → KubeRay or Ray for distributed execution.
+3. **Design the request path explicitly:** client → gateway → router → serving pod → model → response. Put routing, budget enforcement, and fallback in the gateway so the application never needs to know which model answered.
+4. **Make the platform own everything that must not vary by accident:** model version, serving parameters, timeouts, retries, max output tokens, and the concurrency budget. If a developer can change a model ID or a prompt in application code, you have lost reproducibility.
+5. **Design for three model paths from day one:** primary, fallback, and a task-complexity router. Retrofitting routing touches every call site and is far more expensive than shipping it initially.
+6. **Define the health model precisely:** liveness (process alive), readiness (weights loaded, accepting traffic), and startup (initialising). Misconfigured probes on GPU services are the classic cause of rollout stalls, flapping readiness, and traffic loss during deploys.
+
+**Artifacts.** Serving platform decision record; request path diagram; model and version registry contract; health probe specification.
+
+**Worked example — Corvid.** The serving platform was deliberately the simplest thing that could work: a managed serverless inference endpoint per model, a gateway (LiteLLM) in front handling routing, fallback, and budget enforcement, and a small container service for retrieval. KServe and Ray Serve were evaluated and rejected because there was no Kubernetes; Triton was rejected because there was one model family. The gateway became the place where the $0.04-per-request ceiling was actually enforced — a per-request token cap and a cost attribution header — which turned the cost guardrail from a code convention someone could forget into an infrastructure property.
+
+**Watch out for.** Adopting a platform because it is impressive. One endpoint per team instead of one per customer. Liveness probes that check the process rather than the model, so a pod with unloaded weights reports healthy. Canary deployment without per-version quality comparison.
+
+**Done when.** There is a written rationale for the platform choice, a request path diagram, and a health probe specification that matches the intended failure behaviour.
+
+---
+
+#### B4. Set up inference servers (vLLM, SGLang, TensorRT-LLM, TGI, Ollama, llama.cpp)
+
+**Goal.** Pick the runtime and tune it so the model serves inside the latency and cost budget — and prove the tuning did not cost you quality.
+
+**How to do it.**
+
+1. **Match the runtime to the model family and the target.** vLLM and SGLang are the default for open-weight LLMs on GPU; TensorRT-LLM for maximum NVIDIA performance, at the cost of a per-model build cycle; TGI for a straightforward HuggingFace deployment; llama.cpp and Ollama for CPU, edge, and small quantised models; managed providers when you want no operational surface at all.
+2. **Establish the baseline before tuning anything.** One request, a full-length prompt, realistic retrieved context — record TTFT, inter-token latency, and sustained throughput. Without this baseline, every later "improvement" is an impression.
+3. **Tune in the order that pays.** Batching first (enable continuous batching, then set `max_num_seqs`), then KV cache sizing and prefix caching for shared system prompts, then quantisation, then speculative decoding. One change at a time, re-measured after each — this is the only way to know what actually helped.
+4. **Quantise behind a quality gate, not a spreadsheet.** Run the Phase 1 labelled set before and after, and accept AWQ, GPTQ, or FP8 only if the delta falls inside the tolerance agreed in Phase 0. A 4-point quality drop saved 20% of latency is a bad trade; a 1-point drop is a good one. Write the decision down either way.
+5. **Set the serving parameters deliberately.** Temperature, top-p, max tokens, stop sequences — and a context length that reflects what the task actually assembles, not the model's maximum. Long context is slower, more expensive, and frequently *less* accurate, because the model attends to noise you paid to ship.
+6. **Pin everything in one manifest:** model ID and revision hash, container image digest, CUDA version, quantisation scheme, serving configuration, and the accompanying prompt version.
+
+**Artifacts.** Runtime selection record; tuning log (parameter → old/new → quality delta → throughput delta → decision); pinned-version manifest; reproducible benchmark harness.
+
+**Worked example — Northwind Mutual.** vLLM on a single L40S serving a 70B open-weight model at 4-bit. Baseline: TTFT 410ms at p50 and 9.2 tokens/sec per stream, which missed the 1.2s end-to-end target once retrieval time was added. The tuning sequence was: enable continuous batching; cap `max_num_seqs` at 32 after observing that raising it increased queueing without adding throughput; enable prefix caching, because the system prompt and claims-handling instructions were byte-identical on every request and were a meaningful share of the prompt; cap context at 8k, since the retrieval pipeline only ever assembled 3–5k tokens. Result: p95 end-to-end 940ms and $0.28 per claim against a $0.31 budget. Quantisation was accepted only after the labelled set moved from 91% to 89.5% — inside the 3-point tolerance agreed in Phase 0 — and the whole trade was recorded as an ADR with the decision reversible.
+
+**Watch out for.** Raising `max_num_seqs` because the metric looked like it should go up. Accepting a quantisation result because the throughput looked good and skipping the quality gate. Setting context length to the model maximum "in case we need it." Running the model without a cap on output tokens, which is how one request consumes 30x the budget.
+
+**Done when.** There is a pinned manifest, a tuning log where every change has a measured quality and throughput delta, and the runtime meets its latency and cost targets.
+
+---
+
+#### B5. Configure GPU scheduling and resource management (MIG, time-slicing, GPU Operator, Run:ai)
+
+**Goal.** Get maximum useful work per GPU while keeping tenants and workloads genuinely isolated.
+
+**How to do it.**
+
+1. **Choose the isolation model first.** MIG gives hard hardware partitioning on A100 and H100 with predictable performance and clean tenant boundaries; time-slicing is cheaper but has worse tail latency, and one tenant can starve another; dedicated GPUs cost the most and isolate best. The choice is a tenant-trust decision, not a performance decision.
+2. **Partition by workload shape, not by team.** Reserve separate profiles for interactive serving and for batch work — embedding, re-indexing, evaluation sweeps. Batch jobs sharing GPUs with interactive traffic are the single most common cause of p95 latency spikes that appear randomly and are impossible to reproduce.
+3. **Use the NVIDIA GPU Operator** to manage drivers and device plugins declaratively; label and taint nodes so the scheduler places workloads correctly without per-pod node selectors.
+4. **Reach for a higher-level scheduler only when you need it.** Run:ai, Kueue, or Volcano earn their complexity at multi-team scale, where you need quotas, fair-share, and gang scheduling. At single-team scale they add a second thing to learn during an incident.
+5. **Set quotas per team and namespace** so one experiment cannot consume the fleet, and give the evaluation suite its own preemptible pool so it can never starve production.
+6. **Watch the three metrics that predict trouble.** GPU utilisation (is the GPU busy, or merely warm?), memory fragmentation (allocations failing despite free memory), and queue depth (are you compute-bound, or waiting on something else?). Throttling is the fourth, and it hides inside the first: a thermally throttled GPU reports as busy and slow.
+
+**Artifacts.** GPU partition plan (profile → GPU type → MIG slice → workloads → tenants); quota and fair-share policy; scheduling alerts.
+
+**Worked example — St. Aldwyn Health.** On the hospital network, the estate was one donated A100 plus two L40S purchased from the capital budget. MIG on the A100 (two 40GB slices) gave the health system hard isolation between the clinical note-generation service and the research workloads its own staff ran on the same machine — and, just as importantly, an isolation story it could show to its compliance officer as a diagram. Time-slicing was rejected after a pilot in which a research job's long evaluation sweeps pushed the clinical service's p95 from 1.1s to 6s at 3am. The finding was written into the risk register, because the next person to deploy a batch job there would otherwise have no idea that it was possible.
+
+**Watch out for.** Sharing one GPU between a customer-facing service and anyone's batch job. Deploying evaluation sweeps onto the production pool "just for today." Assuming MIG slices perform like full GPUs — the memory and compute partitioning means a slice's throughput is not a clean fraction of the whole. Setting quotas but not enforcing them with admission control.
+
+**Done when.** Interactive and batch workloads run on separate profiles, quotas are enforced, and the partition plan names which tenants and workloads share each resource.
+
+---
+
+#### B6. Establish networking (VPC, private endpoints, peering, service mesh, load balancers)
+
+**Goal.** Build a network where the path from user to model to data is explicit, private, and observable — and where an exfiltration path does not exist by default.
+
+**How to do it.**
+
+1. **Draw the paths before you build them:** user → edge or gateway → application → vector store → model endpoint → downstream APIs, with the data class that traverses each segment and the residency constraint that applies to it.
+2. **Segment by environment and by trust:** separate VPCs or at minimum separate subnets, security groups, and NetworkPolicies with default-deny and explicit allows. The default-deny posture is the point — an open egress path is what turns a single application bug into a data incident.
+3. **Use private connectivity for data stores and model endpoints:** private subnets, no public IPs on the data tier, and egress control so the application can reach only what it needs.
+4. **Constrain egress explicitly.** RAG and agentic systems both make outbound calls by design. An unconstrained egress path is the network-level equivalent of an unguarded tool call, and it is far cheaper to fix in the network design than to audit in the application.
+5. **Plan TLS termination and internal re-encryption:** where the external load balancer ends TLS, whether traffic is re-encrypted inside, and how certificates rotate without dropping connections.
+6. **Measure what the network costs you.** Round-trip time to the model endpoint, DNS resolution time, and whether the vector store sits in the same availability zone as the application — it should, and if it does not, your retrieval p95 is paying an availability-zone penalty on every query.
+7. **Write down the degraded paths.** For each dependency, what the system does when it is slow or unreachable. This list becomes your test plan in B18.
+
+**Artifacts.** Network diagram with trust boundaries and data classes; egress allow-list; connectivity matrix (source → destination → protocol → auth → port); latency budget per hop; degraded-path table.
+
+**Worked example — Northwind Mutual.** The claims environment ran in the customer-managed VPC in the US region with a private endpoint to the model provider and no public egress from the data tier. The vector database sat in the same availability zone as the application service. The egress allow-list had exactly three entries: the model endpoint, the claims API, and the object store. That allow-list was the artefact that made the security review short — it converted "we are deploying AI" into "here are the three places customer data can go." The alternative design, a public model endpoint, would have put a state insurance regulator's data-residency question directly on the critical path, and nothing about the technical problem required it.
+
+**Watch out for.** Diagrams that show the happy path and no trust boundaries. Default-allow egress. The vector store in a different AZ from the app because someone deployed it separately. Assuming internal traffic is encrypted because TLS is terminated at the edge.
+
+**Done when.** Every trust boundary is labelled with its enforcing mechanism, egress is default-deny with an explicit allow-list, and the degraded-path table exists.
+
+---
+
+#### B7. Configure TLS/mTLS, certificate management, and service-to-service authentication
+
+**Goal.** Ensure every hop is authenticated, encrypted, and rotatable without downtime.
+
+**How to do it.**
+
+1. **Decide the trust model before enabling anything.** Which services need workload identity (mTLS) and which are fine with a signed token behind the gateway? Applying mTLS everywhere costs latency, complexity, and an on-call burden, and it buys security only where the boundary is real.
+2. **Use managed PKI or cert-manager** for issuance, renewal, and revocation. Short certificate lifetimes make rotation routine rather than an event — if rotation is painful, it will not happen, and that is the same as having no rotation.
+3. **Prefer workload identity over static secrets.** IRSA, workload identity federation, or pod identity lets a workload authenticate to the cloud with a short-lived, audience-bound token, which removes the credential rather than protecting it better.
+4. **Enforce at the mesh or gateway**, so a developer cannot accidentally publish an unauthenticated route and nobody notices until a scan finds it.
+5. **Rotate on a schedule and on a trigger** — key compromise, team change, environment decommission — and prove rotation works *before* you need it.
+6. **Verify what your logs and traces carry.** Encrypted transport does not help if the payload is written to a log in plaintext.
+
+**Artifacts.** Trust model table (service pair → mechanism → justification); certificate lifecycle policy (issuer, lifetime, rotation trigger); mesh configuration; rotation runbook plus drill results.
+
+**Worked example — Meridian Bank.** The bank's policy required mutual TLS between service components and forbade long-lived static credentials for anything touching customer data. The implementation used the cluster's internal CA with cert-manager automatic issuance and 24-hour certificate lifetimes, plus workload identity federation for cloud calls, which left zero static keys in the cluster. The practical payoff showed up during Phase 2 validation: rotating the entire mesh took minutes and required no redeploy. That mattered because the bank's own policy mandates credential rotation every 90 days — with static keys that would have been a recurring, scheduled outage rather than a non-event.
+
+**Watch out for.** Certificates with a one-year lifetime because renewal was annoying. Service account tokens used as bearer tokens across services. A service mesh deployed to solve a problem that a gateway already solved. Believing a rotation runbook is enough without a drill.
+
+**Done when.** Every service-to-service hop has a documented mechanism, certificates rotate on their own schedule without downtime, and a rotation drill has been run.
+
+---
+
+#### B8. Set up private AI model endpoints (PrivateLink, Private Endpoint, Private Service Connect)
+
+**Goal.** Reach the model without exposing the application, the data, or the traffic to the public internet.
+
+**How to do it.**
+
+1. **Classify what the requirement actually is:** network exposure, data residency, contractual commitments, or all three? Each has a different answer, and conflating them leads to over-engineering the network and under-answering legal.
+2. **For managed providers, use the private connectivity option** — AWS PrivateLink, Azure Private Endpoint, GCP Private Service Connect — or a provider-hosted endpoint inside your VPC. Then read the specific feature's data-handling terms rather than the marketing page; the retention and training commitments are tier-specific and region-specific.
+3. **For self-hosted models, the private endpoint is yours to build:** an internal ClusterIP or private load balancer, with no public path present by default rather than disabled by configuration that someone can re-enable.
+4. **Verify the two claims people most often get wrong:** that the provider does not log your prompts at your tier, and that your own logs, traces, and evaluation datasets redact sensitive content. Both are testable and both should be tested.
+5. **For egress-restricted or air-gapped environments, plan the weight supply chain separately.** Weights must reach the environment somehow, and that path needs checksums, provenance, and a signature. It is a software supply chain whether or not anyone calls it one.
+6. **Confirm and document residency** with a diagram you can hand to legal — a diagram, not a paragraph, because legal will ask "where exactly" and an arrow is easier to verify than a sentence.
+
+**Artifacts.** Endpoint connectivity design; residency and logging attestation; private endpoint configuration; egress verification test results; weight provenance and checksum record.
+
+**Worked example — Corvid.** The EU data residency requirement meant the US endpoint could not serve EU customers at all, so the deployment became two regional stacks behind a geo-routing gateway, each with its own private endpoint, vector store, and model deployment. The reason for two complete stacks rather than one stack with regional routing was the vector store: embeddings and indexes are derived from customer content, and the residency commitment covered derived data as well as the original. The design review where legal confirmed the provider's no-training and no-logging terms for the endpoint tier was the meeting that actually set the launch date.
+
+**Watch out for.** Assuming a private endpoint changes the data-handling terms — it changes the network path, not the contract. Residency promised for prompts but not for embeddings or traces. Weights fetched at deploy time from the internet inside an air-gapped environment. Skipping the logging verification because it is written somewhere in the provider's documentation.
+
+**Done when.** The application reaches the model over a private path, egress is verified by test rather than by intent, and residency is documented in a diagram legal has signed off.
+
+---
+
+#### B9. Configure model registry and artifact management
+
+**Goal.** Make "which model is live, and where did it come from" a single query rather than an investigation.
+
+**How to do it.**
+
+1. **Register the whole serving artifact, not just the weights.** Model ID, revision hash, quantisation scheme, tokenizer version, serving parameters, container image digest, CUDA version, and the prompt version that ships with it. A registry entry for weights alone cannot reproduce a production response.
+2. **Make the registry the source of truth for what is deployed,** and have the deployment pipeline read from it. Promotion then becomes a registry state change rather than a manual apply, and the two can never diverge.
+3. **Tag with the things you will need to query later:** environment, tenant, data classification, stage, and the evaluation results that qualified the artifact. Design the tag taxonomy before you have a thousand entries.
+4. **Keep lineage:** which evaluation set, which threshold, which approver let this version ship. Without it you cannot answer a regulator's question about why a given model is in production.
+5. **Implement stage transitions as policy:** no version moves to production without an attached passing evaluation result and a named approver. Encode it in the pipeline, not in a policy document.
+6. **Prune and archive.** A registry that only grows becomes the thing nobody trusts, and the thing nobody trusts cannot answer an incident question during an incident.
+
+**Artifacts.** Model card template; registry schema and tag taxonomy; promotion policy with gates; lineage record.
+
+**Worked example — Halden & Rowe.** The per-matter configuration meant there was no single "live model" — there were dozens of live configurations, one per matter, each with a frozen clause-library version. The registry entry per matter recorded the model revision, the prompt version, the clause-library snapshot, and the index namespace. That made the answer to "what exactly produced this clause flag on 14 March" a lookup rather than an investigation, and it made per-matter destruction tractable: deleting the registry entry became the trigger for destroying the index namespace and the associated audit material. Designing the registry around confidentiality destruction was unusual — most teams design it around promotion.
+
+**Watch out for.** Registering only weights. Letting the registry drift from reality because deployments are applied by hand. Tag taxonomy invented after the fact. Promotion by someone without an attached evaluation result.
+
+**Done when.** Any running model version can be traced to a digest, a configuration, an evaluation result, and an approver — in one query.
+
+---
+
+#### B10. Set up container registries and image management
+
+**Goal.** Ship the same artifact everywhere and be able to say exactly what is running.
+
+**How to do it.**
+
+1. **Pin by digest, not by tag.** Tags move; digests do not. A deployment referenced by tag is a deployment you cannot reproduce or roll back to.
+2. **Build once and promote the same digest** through dev, staging, and production. Rebuilding per environment is precisely how "works in staging" happens — the environments are not running the same thing, and you discover it during an incident.
+3. **Scan images for vulnerabilities and for leaked secrets before they enter the registry,** and sign them so a tampered image cannot be deployed.
+4. **Keep a small, curated set of inference images.** A base runtime image, the CUDA version, and the model weights as a separate artifact. Do not build a bespoke image per model — you will have dozens and no consistent patching story.
+5. **For air-gapped or egress-restricted environments, mirror the registry internally while preserving digests exactly.** Digest preservation is what makes an offline environment reproducible and what allows the same evaluation evidence to transfer between the vendor's environment and the customer's.
+6. **Set retention and prune.** The registry becomes a cost line and a supply-chain risk if left alone.
+
+**Artifacts.** Registry layout and naming convention; build and promotion pipeline definition; image signing and scanning configuration; air-gapped mirroring runbook.
+
+**Worked example — St. Aldwyn Health.** The hospital network had no internet egress, so the entire inference stack had to be mirrored into the internal registry before anything could run. The mirror preserved digests exactly, and the delivery pipeline was re-pointed at the internal registry so that the "same image" claim held in both the hospital and the vendor's validation environment — which was the only reason the Phase 4 evaluation results were transferable evidence rather than an anecdote about somebody else's hardware. Model weights were handled the same way: downloaded once in the vendor environment, checksum-verified against the upstream revision hash, and shipped as an artifact carrying that hash.
+
+**Watch out for.** Deploying by tag. Rebuilding the image per environment. Pulling model weights at pod start inside an air-gapped environment. A registry with no retention policy. Images carrying credentials because "it is only an internal registry".
+
+**Done when.** Every deployed artifact is addressable by digest, the same digest is promoted across environments, and the registry is scanned, signed, and pruned.
+
+---
+
+#### B11. Configure storage (model weights, vector DB persistence, dataset caching, NVMe hot paths)
+
+**Goal.** Store weights, indexes, and data on the right media with the right tiering, and know what growth will cost before it happens.
+
+**How to do it.**
+
+1. **Inventory the four storage classes by access pattern.** Model weights (read once per node start, then hot), the vector index (read-heavy, random access, hot), the corpus (read-mostly, large, archive-able), and the trace and log store (write-heavy, append-only, retention-bound). Each wants different media, different IOPS, and a different lifecycle.
+2. **Put the index and hot weights on fast storage and measure random IOPS.** Vector search becomes IO-bound well before it becomes compute-bound, and a storage-lazy index produces a latency profile that looks like a model problem.
+3. **Load weights onto the node once, not per request,** with a shared object store as the source of truth and a local node cache — and verify the local cache is actually populated before the pod reports ready.
+4. **Compute the growth.** Index bytes per document times corpus growth rate; model bytes times replica count times the number of versions you keep. You keep old versions, because rollback requires them.
+5. **Set lifecycle policies for archive tiers and for trace retention,** and confirm the retention requirement with compliance *before* setting the policy rather than after.
+6. **Plan for the storage event.** A full index rebuild is a storage operation, not a code operation, and it needs headroom, a time window, and a plan for serving from the old index while the new one builds.
+
+**Artifacts.** Storage inventory (class | data | access pattern | tier | growth | cost); capacity model; lifecycle and retention policy; rebuild runbook.
+
+**Worked example — Meridian Bank.** The 4.2M-chunk index at 1,024 dimensions needed roughly 17 GB of vectors plus index overhead, so it was sized as a 100 GB tier-1 volume with room for two concurrent rebuilds. The KYC corpus itself was about 2 TB and lived in cold storage behind a read-through cache. The non-obvious cost was the trace store: full prompt and completion logging at 30,000 requests a day produced a monthly volume that dwarfed the model-serving bill, so a sampling policy was applied at ingest — full traces for a sampled 5% plus every error and low-confidence trace — which preserved full-fidelity debugging for the cases that matter. Retention was set at 90 days with compliance, and the sampling policy was written into the compliance pack so an examiner saw the design rather than the raw figure.
+
+**Watch out for.** Storing the index on network storage without measuring random IOPS. Pulling weights per request. Ignoring that trace volume can exceed inference cost by an order of magnitude. Setting a retention policy that conflicts with a legal hold.
+
+**Done when.** Every storage class has a documented access pattern, tier, growth projection, and lifecycle rule, and a full index rebuild has been rehearsed.
+
+---
+
+#### B12. Implement autoscaling (HPA, GPU node autoscaling, queue-based batch scaling)
+
+**Goal.** Serve the peak without paying for the peak all month — and know which of the two you are solving.
+
+**How to do it.**
+
+1. **Split the traffic into two scaling problems.** Interactive serving scales with concurrency and keeps warm capacity to protect p95; batch work scales with queue depth and can scale to zero. One HPA on GPU pods cannot express "run 200 embedding jobs when the queue has work" — that is a KEDA or queue-based policy, and conflating the two is why batch jobs degrade interactive latency.
+2. **Set the minimum replica count from the p95 requirement, not from the average.** Scale-to-zero is attractive for cost and wrong for interactive traffic unless you accept a cold-start penalty on the first request after every idle period. Decide whether you accept it, then measure the cold start (B18).
+3. **Scale on a signal that reflects the bottleneck.** GPU utilisation or queue depth, not CPU, which is a poor proxy for GPU-bound work and a good way to scale on nothing.
+4. **Add a scale-down stabilisation window** so a burst does not cause a thrash between zero and full capacity, which is both expensive and latency-visible.
+5. **Put a concurrency limit per replica and a queue in front,** so overload produces latency you can observe rather than an unbounded backlog that hides in memory.
+6. **Add a hard cost guard:** a per-tenant request budget, a token cap, and a daily spend ceiling that sheds or blocks traffic rather than merely reporting.
+
+**Artifacts.** Scaling policy per workload (signal | min | max | scale-up | scale-down | cooldown); capacity and cost model; load test results; cost guardrail configuration.
+
+**Worked example — Corvid.** 12,000 tickets a day with a peak-to-average ratio of 8, because inbound email is bursty by nature — a campaign or an upstream outage creates a spike. A fixed six-GPU pool would have cost roughly five times more than necessary. The design was a serverless inference endpoint with scale-to-zero plus a two-replica warm floor to hold the 4-second ceiling, an embedding batch job on a queue that scaled to zero, and a semantic cache in front that absorbed the repeated status questions that were 31% of volume. The monthly inference bill landed at roughly a third of the always-on pool, and p95 stayed inside the 4-second target because the warm floor existed — scale-to-zero paid for the variable load, and the warm floor paid for the latency promise.
+
+**Watch out for.** One autoscaling policy for both interactive and batch. Scaling to zero on the interactive path and then discovering the cold start is 40 seconds. Scaling on CPU utilisation. No concurrency limit, so a traffic spike becomes a queue that no one can see. Cost guardrails that only report.
+
+**Done when.** Each workload has its own scaling policy with documented signals and bounds, the load test demonstrates behaviour past the knee, and a spend ceiling actively sheds traffic.
+
+---
+
+#### B13. Configure monitoring infrastructure (Prometheus, Grafana, DCGM Exporter, node exporters)
+
+**Goal.** See the health of the stack and the health of the AI in the same place — before an incident tells you.
+
+**How to do it.**
+
+1. **Instrument three layers, and do not stop at two.** The cluster (nodes, GPU, network), the service (requests, latency, errors, saturation), and the model (tokens, queue depth, batch efficiency, cache hit rate, fallback triggers). Most teams instrument the first two and are blind on the third, which is why they learn about cost from the invoice.
+2. **Pull GPU metrics from DCGM Exporter:** utilisation, memory, temperature, power draw, ECC errors, and throttling reasons. Throttling is the one people miss — a thermally or power-capped GPU reports as busy and slow, and the remediation is entirely different.
+3. **Record the right latency quantiles.** p50, p95, and p99 on TTFT and end-to-end latency, with histogram buckets fine enough that p95 means something. A 60-second-bucket histogram cannot produce a meaningful p95.
+4. **Trace the whole request path, including the LLM span.** Prompt tokens, completion tokens, cached tokens, model version, and the retrieved chunk IDs — so cost and quality can be attributed to a request rather than to a service.
+5. **Build three dashboards for three audiences.** Executive: availability, latency, cost, usage. Operator: queues, saturation, errors, fallback rate, cold starts. AI: tokens, cache hit rate, refusal rate, tool-call success, and a quality sample. Building one dashboard for all three guarantees that nobody reads it.
+6. **Alert on symptoms users feel, not on every cause.** Latency breach, error rate, cost anomaly, quality regression, and index freshness. A GPU temperature alert at 3am is noise that trains people to ignore alerts.
+
+**Artifacts.** Metric catalogue with owners; dashboard set per audience; alert rules with thresholds, owners, and runbook links; tracing configuration and sampling policy.
+
+**Worked example — Corvid.** The dashboard that mattered most was cost per *successful* ticket — the daily inference spend divided by tickets that were both deflected and not reopened. Showing the CFO that the AI cost per deflected ticket was below an agent's loaded hourly cost, while the CSAT panel showed no decline, was the argument that secured the next tranche of budget. The AI view carried the cache hit rate, which was the single leading indicator of both cost and latency — and it was the first number to move when the help centre changed its content format and invalidated the cache's assumptions.
+
+**Watch out for.** Alerting on GPU temperature instead of on latency. Logging full prompts and completions at 100% sampling without a cost model. Missing the LLM span, so no token or cost attribution is possible. A single dashboard for every audience.
+
+**Done when.** The three dashboards exist, every alert has a threshold and an owner and a runbook, and cost can be attributed to an individual request.
+
+---
+
+#### B14. Set up CI/CD pipelines for model and application deployment
+
+**Goal.** Make every change to the running system a repeatable, reviewable, reversible event.
+
+**How to do it.**
+
+1. **Run one pipeline with two gates.** Code and configuration changes (fast, per commit) and model, prompt, or retrieval changes (slow, per release). The evaluation suite belongs to the second gate — it is the only thing standing between a prompt tweak and a production regression.
+2. **Build once and promote the same artifact.** The image built in CI is the image that reaches production, promoted by digest.
+3. **Make deployment declarative.** GitOps with ArgoCD or Flux means the desired state lives in Git and the cluster converges to it, so "what is running" is answerable by reading a repository rather than by asking someone.
+4. **Encode environment differences in configuration, not in build steps.** One image, per-environment configuration and secrets. Build-per-environment is the mechanism behind most "works in staging" incidents.
+5. **Automate rollout safety:** canary with automated analysis, health gates between steps, and a one-command rollback that has been rehearsed.
+6. **For air-gapped or restricted networks, run the pipeline inside the environment.** Mirror the runners, the base images, and the package sources — and verify that the mirrored pipeline produces the same digests.
+
+**Artifacts.** Pipeline definition per stage; promotion policy and gates; rollback procedure; environment configuration matrix; mirror procedure for restricted networks.
+
+**Worked example — St. Aldwyn Health.** The hospital network meant the pipeline had to run inside the hospital network, so the vendor's GitHub Actions workflow was mirrored to an internal runner pool with mirrored base images and a mirrored Python package index. The result was that the hospital's own engineers could run the build and the evaluation suite themselves — the single most important element of the Phase 5 handoff, and the one that would have been impossible if the pipeline had stayed in the vendor's cloud. Mirroring also had to preserve digests, which is what allowed the Phase 4 evaluation results to be treated as valid evidence rather than as results from different software.
+
+**Watch out for.** One pipeline that runs the full evaluation suite on every commit, so people learn to skip it. Deploying with `--force` because the declarative sync is out of date. No rollback gate in the pipeline. Assuming a pipeline that runs in the vendor's cloud is usable inside a customer's air-gapped network.
+
+**Done when.** The same digest is promoted through every environment, the evaluation gate is enforced by the pipeline, and rollback is a tested command rather than a documented intention.
+
+---
+
+#### B15. Provision edge compute for low-latency or air-gapped deployments
+
+**Goal.** Run inference where the data lives and where the latency budget lives — without creating a fleet you cannot support.
+
+**How to do it.**
+
+1. **Justify edge with a constraint, not a preference.** Sub-200ms requirement, intermittent or absent connectivity, data that cannot leave the site, or a regulatory requirement for local processing. If none of those applies, edge buys you a fleet-management problem you do not need.
+2. **Size honestly against the hardware ceiling.** Jetson Orin-class and L4-class devices run 7–8B models, usually quantised, very well, and frontier models not at all. Measure the largest model that meets the latency target *on the target device*, not on a datacenter GPU — the number changes completely.
+3. **Budget the operational cost, which is the real cost.** Physical security, power and cooling, device fleet management, firmware and OS patching, spares, and on-site visits. Edge deployments fail on hardware logistics far more often than on model performance.
+4. **Design the sync model explicitly.** What happens when the site is offline for eleven hours — does the system degrade, queue, or refuse? What is the local cache and its TTL? What is authoritative during a partition, and what happens when both sides changed the same record?
+5. **Design the update path.** Signed and mirrored images, staged rollout across the fleet, and a rollback that works over an unreliable link.
+6. **Decide what leaves the edge.** Aggregate statistics, prompts, telemetry, embeddings — each has a residency implication and each should be an explicit decision.
+
+**Artifacts.** Edge hardware specification and justification; fleet management plan; offline behaviour specification; site installation and recovery runbook; data egress decision list.
+
+**Worked example — St. Aldwyn Health.** The emergency department's satellite site had intermittent connectivity and a hard requirement that patient notes never left the building. The deployment was a ruggedised workstation with an L4 and a 7B model at 4-bit, running local inference against a local vector index, syncing only aggregate statistics to the main hospital site when the link returned. The specification that mattered most was the offline behaviour: during an outage the site would continue serving from its local index, queue its summary jobs for sync, and explicitly not attempt to reach the central store — because a component that hangs waiting on an unreachable dependency is far worse than one that degrades predictably.
+
+**Watch out for.** Choosing the largest model that fits rather than the smallest that is good enough. Treating a fleet of devices as a single machine. Updating the fleet manually because "it's only four sites". Letting the edge site queue writes without a conflict policy.
+
+**Done when.** The edge hardware is justified by a written constraint, the largest qualifying model was measured on the target device, and offline behaviour is specified and tested.
+
+---
+
+#### B16. Configure 5G/LTE/Wi-Fi connectivity for edge deployments; test failover scenarios
+
+**Goal.** Make the edge site work when the network does not — which it will.
+
+**How to do it.**
+
+1. **Measure the connectivity that actually exists at the site,** at the hours that matter: bandwidth, latency, jitter, packet loss, and time to re-establish after an outage. Vendor peak numbers are not site numbers, and a site in a basement behaves nothing like the vendor's lab.
+2. **Choose redundant links with genuinely independent failure paths** — two carriers on different towers, or one wired plus one cellular. Two cellular links from the same carrier share a tower, a backhaul, and a power supply, which means they fail together.
+3. **Define the behaviour at each degradation level:** full operation, degraded operation (reduced model, cached content, batch only, local-only reads), and offline operation. Each level needs a trigger, a defined user experience, and a named owner.
+4. **Test failover for real.** Pull the primary link during a busy shift rather than in a lab: simulate a tower outage, a carrier-side event, and a local device failure, and time the gap.
+5. **Build for the reconnect:** exponential backoff, queued writes, idempotent sync, and an explicit conflict policy for records changed on both sides while partitioned.
+6. **Make the site observable without connectivity.** Buffer logs and metrics locally and ship them on reconnect, and expose a heartbeat so the central system can see the absence of the site — silence is not a status.
+
+**Artifacts.** Connectivity survey per site; link redundancy design; degradation and failover matrix (failure → detection → behaviour → user impact → recovery); failover test report with measured gaps.
+
+**Worked example — St. Aldwyn Health.** The ED site had one wired link that failed roughly monthly during building works, plus one cellular backup on a different carrier. The failover test in Phase 2 produced the finding that shaped the whole design: failover took 47 seconds, because the application retried the central store with a short fixed timeout while the local index held no authoritative copy of recent documents. The fix was local-first reads with a warm cache of the last seven days of content, a written degradation matrix, and queued writes. After the fix, degraded operation began in under three seconds with no user-visible interruption to note generation — a gap nobody would have found without pulling the cable during a shift.
+
+**Watch out for.** Two links that share a failure path. Testing failover at 2am on an empty site. Retrying the central store without a circuit breaker. No conflict policy for records edited on both sides. Assuming the site reports healthy while it is buffering everything.
+
+**Done when.** Every site has a surveyed connectivity profile, at least two independent links, a written degradation matrix, and a failover test with measured recovery times.
+
+---
+
+#### B17. Implement secret management (Vault, AWS Secrets Manager, Azure Key Vault, Kubernetes Secrets)
+
+**Goal.** Ensure no credential lives in code, image, notebook, or repository — and that rotation is routine rather than an event.
+
+**How to do it.**
+
+1. **Classify the secrets before choosing a tool:** model provider keys, cloud credentials, database passwords, signing keys, encryption keys, and any customer credential the system holds on a user's behalf. The last category is the one that ends up in a config file.
+2. **Store them in a managed secret store** and mount them into workloads at runtime — never baked into images, never passed as Helm values, never in a repository.
+3. **Prefer workload identity and short-lived tokens over static keys** wherever the provider supports it. Federation removes a credential entirely, which is strictly better than protecting it well.
+4. **Separate key access from secret access.** Reading a secret should not also reveal the encryption key that protects it, and the person who can decrypt should not necessarily be the person who can read.
+5. **Audit every secret access.** An audit trail on reads is how you discover the leak you did not know you had — and it is frequently a compliance requirement in its own right.
+6. **Rotate on a schedule and on a trigger,** and test rotation in a non-production environment first. Prove the system survives rotation before relying on it at 3am.
+7. **Scan repositories, images, and notebooks for leaked credentials** — including ones you are certain were removed from the history.
+
+**Artifacts.** Secret inventory with owner and rotation policy; secret store configuration; workload identity mapping; rotation runbook plus drill results; secret-scanning configuration.
+
+**Worked example — Meridian Bank.** The bank's policy forbade long-lived static credentials for any component touching customer data, so the cluster was configured with workload identity federation to the cloud and the internal CA for mTLS, which left zero long-lived keys in the cluster. Two places would have violated the policy without deliberate design: the model registry pull secret and the vector store password, both of which had been copied from a development runbook. Both were moved into the secret store with automatic rotation, and the access audit log was wired into the bank's existing SIEM — which meant a secret read from an unexpected workload would surface in the bank's own monitoring rather than in the vendor's, which is the arrangement the bank's security team actually required.
+
+**Watch out for.** Kubernetes Secrets committed alongside the manifests. A `.env` file on a laptop that later becomes a shared drive. Rotating a secret without confirming every consumer reads it dynamically. Disabling secret-scanning because it produces false positives.
+
+**Done when.** No credential exists in code, images, or repositories, rotation has been drilled successfully, and every secret read is audited.
+
+---
+
+#### B18. Validate infrastructure (GPU health checks, network throughput, storage IOPS, cold-start benchmarks)
+
+**Goal.** Prove the stack meets its numbers before a single application feature is built on top of it.
+
+**How to do it.**
+
+1. **Validate in layers and never skip upward.** Hardware health (GPU memory, ECC errors, thermals, power draw) → network (throughput, latency, MTU, DNS) → storage (IOPS, random read latency, headroom) → serving (throughput, TTFT, concurrency behaviour) → application end to end. A failure at layer one invalidates every number above it.
+2. **Measure cold start separately from warm performance.** Time from pod start to first token, with weights loading and with a warm page cache. Cold start is what every user experiences after a deploy and after every scale-up from zero, and it is very often the number that breaks the latency promise.
+3. **Run a real load profile, not a synthetic one:** realistic prompt lengths, realistic retrieved context, the real concurrency mix (the 80/20 simple-to-complex split), and realistic tool-call behaviour. Synthetic short prompts hide memory pressure and make a system look ten times faster than it is.
+4. **Push past the knee deliberately.** Find where latency degrades, and confirm the system degrades predictably rather than collapsing. Record the knee — it is the autoscaling input from B12 and the capacity trigger from B1.
+5. **Test the failure paths in the validated environment:** kill a GPU node, kill the primary model, throttle the vector store, sever the network to a downstream API, and confirm the designed fallbacks actually engage rather than merely existing in a diagram.
+6. **Produce a validation report with measured numbers against the targets,** so every later claim — in Phase 4, Phase 5, and every executive conversation — has a baseline to point at.
+7. **Write the validation as a repeatable script.** The same harness should run before go-live in Phase 5 and after every material change in Phase 6.
+
+**Artifacts.** Infrastructure validation report; hardware health check suite; network and storage benchmarks; load test results; failure-injection test log; repeatable validation script.
+
+**Worked example — Corvid.** The Phase 2 validation run recorded the numbers everything downstream depended on: TTFT p50 240ms and p95 610ms, end-to-end p95 3.4s against the 4-second ceiling, 62 requests per second sustained at 140 concurrent users, 11s cold start, and $0.038 per request. The failure-injection runs were the most valuable part. Killing the primary endpoint confirmed the gateway fallback engaged in 1.8s with no failed requests. Throttling the vector database to 200ms confirmed the retrieval timeout behaved as designed instead of hanging the request. Running with a deliberately mismatched embedding index showed the version check refusing to serve rather than returning silently wrong results — the exact failure the embedding and index versioning contract existed to prevent, and the only way to know the check works is to trip it.
+
+**Watch out for.** Validating only the hardware and skipping the end-to-end path. Testing with short synthetic prompts. Declaring success on a single request. Never triggering the failure paths you designed, so the fallbacks remain theoretical. A validation harness that lives on a laptop and is run once.
+
+**Done when.** A validation report exists with measured numbers against every Phase 0 target, the failure paths have been deliberately exercised, and the harness is a script the team can rerun.
+
+---
+
+#### Documented Cases Referenced
+
+Publicly reported cases used throughout Pillar B, cited for the decision pattern each illustrates.
+
+| Case | Year | Point it supports | Used in |
+|------|------|-------------------|---------|
+| **vLLM / PagedAttention** (Kwon et al., SOSP) — serving efficiency framed as a memory-management problem, with large reported throughput gains over prior systems | 2023 | KV cache management and continuous batching are where throughput comes from | B4, B5 |
+| **Uber's Triton Inference Server** — built to serve many model types with dynamic batching across a shared fleet | 2019 | Build the platform layer once; at scale the platform is the product | B3, B5 |
+| **DeepSeek-V3** — ~2.788M H800 GPU-hours and ~$5.576M widely cited for the *final* pretraining run; R1 released as open weights | 2025 | (a) Cost claims need scope — that figure excludes R&D, prior runs, data, and staff; (b) architecture choices drive unit economics; (c) an open-weights release changes serving economics overnight | B1, B4, B12 |
+| **Amazon's migration of 4,000+ internal support applications to a managed model platform** | 2024 | At scale the platform — routing, guardrails, evaluation, cost attribution — matters more than the endpoint | B3, B12, B13 |
+| **Meta Llama 3.1** — ~24,000 H100s reported for 405B serving capacity, with smaller models handling most traffic | 2024 | Size for the hard tail, route the rest; the small model is the cost story | B1, B12 |
+| **Microsoft Phi-3 Mini (3.8B)** — a capable small model designed for laptop and edge scale | 2024 | Benchmark the small model first; many tasks never needed the frontier | B4, B15 |
+| **Deterministic hardware inference providers** (Groq, Cerebras) — fixed-latency serving at per-token pricing | 2023– | The serving model changes unit economics and latency profile; benchmark your own workload | B4, B12 |
 
 </details>
 
