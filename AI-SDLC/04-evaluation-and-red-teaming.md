@@ -319,3 +319,4 @@ Record every change with its eval delta. This log becomes the strongest artifact
 - Previous: [Phase 3 — RAG / Agent Build](03-rag-agent-build.md)
 - Next: [Phase 5 — Go-Live & Handoff](05-go-live-and-handoff.md)
 - Source reference: [FDE-Responsibilities.md — Pillar D (Evaluation, Red-Teaming & Go-Live)](../FDE-Responsibilities.md) and [§11 Eval Framework Template](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar D](../FDE-Responsibilities.md) expands the 18 evaluation and go-live tasks as step-by-step procedures with templates, the same five worked business cases (Northwind Mutual, Meridian Bank, Corvid, St. Aldwyn Health, Halden & Rowe), and twelve publicly documented reference cases.

@@ -1,6 +1,6 @@
 # Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 2.3
+**Version:** 2.4
 **Last Updated:** 2026-10-21
 **Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
@@ -51,7 +51,7 @@ The role decomposes into seven pillars:
 
 #### Case Index
 
-Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure) and Pillar C (inference stack), with their infrastructure and model shapes fixed there.
+Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), and Pillar D (evaluation), with their infrastructure, model, and evaluation shapes fixed there.
 
 | # | Case | Sector & Scale | The Ask | Hard Constraint | Instructive Because |
 |---|------|----------------|---------|-----------------|--------------------|
@@ -1605,8 +1605,22 @@ Publicly reported cases used throughout Pillar C, cited for the decision pattern
 
 ### Pillar D: Evaluation, Red-Teaming & Go-Live
 
+> **Phase playbook:** [AI-SDLC Phase 4 — Evaluation & Red-Teaming](AI-SDLC/04-evaluation-and-red-teaming.md) and [Phase 5 — Go-Live & Handoff](AI-SDLC/05-go-live-and-handoff.md) cover this ground as gated phases with evaluation checklists, red-team plans, and a go-live gate. This section is the *how* — procedures, templates, and worked cases.
+
 <details>
-<summary><b>18 core tasks</b> (click to expand)</summary>
+<summary><b>18 core tasks — detailed breakdown</b> (click to expand)</summary>
+
+#### Case Index
+
+The same five cases carry into evaluation, with their evaluation shape fixed here. Read this table before designing a test programme.
+
+| # | Case | Evaluation Shape | Scale | Binding Constraint | Teaches |
+|---|------|------------------|-------|--------------------|---------|
+| **1** | **Northwind Mutual** | Regulated claim triage; golden set built with claims supervisors and senior adjusters | 180 claims acceptance panel; 500-case labelled set; 11% → 6% agent override rate | Medical PII; state insurance rules; adverse decisions are auditable | Adversarial testing against a document-borne injection is a launch blocker |
+| **2** | **Meridian Bank** | KYC screening judged against the bank's own CDD clauses; local judge model, no external API | 200-file stratified sample; 4.2M-chunk corpus; high-value-account slice is 4% of files | SEC/FINRA; PII cannot leave the building; regulator-facing output | The judge must be local, calibrated, and defensible to compliance |
+| **3** | **Corvid** | Support deflection with an outcome metric; continuous eval on sampled production tickets | 300 tickets/week sampled; 400-case regression set; 150-case held-out set | 4s latency ceiling; $0.04/request; CSAT must not fall | Deflection is an outcome; the held-out set is the only number you quote |
+| **4** | **St. Aldwyn Health** | Clinical draft summaries verified by physicians; PHI filters and clinical domain validators | ~60 summaries/day; 412-case golden set; 40% of expected behaviour is escalate | HIPAA/BAA; PHI never leaves the network; 24/7 clinical availability | Evaluate the guardrails and the false-block rate, not only answer quality |
+| **5** | **Halden & Rowe** | Clause flagging for 30 junior lawyers; partner-authored golden set; local judge | ~40 requests/day; first-pass review of junior work | Privilege, per-matter isolation; no external API | Show the refusals in the demo — a refusal is the product |
 
 - [ ] Design and implement evaluation frameworks: golden sets, regression suites, continuous eval pipelines
 - [ ] Define evaluation metrics per use case: correctness, faithfulness, relevance, completeness, coherence, toxicity, bias
@@ -1626,6 +1640,483 @@ Publicly reported cases used throughout Pillar C, cited for the decision pattern
 - [ ] Obtain formal customer sign-off on deployment acceptance criteria
 - [ ] Define production SLOs: latency targets, availability, error rates, quality thresholds
 - [ ] Prepare go-live checklist: monitoring active, alerts configured, rollback plan ready, on-call roster set
+
+---
+
+#### D1. Design and implement evaluation frameworks
+
+**Goal.** A repeatable harness that produces numbers you can compare across releases, and a decision rule attached to each number.
+
+**How to do it.**
+
+1. **Write the evaluation contract before the harness.** What must the system do, which behaviours are pass or fail, what "good enough" is, and who decides. A framework without a decision rule is a dashboard.
+2. **Evaluate at three layers and report all three.** Component (retrieval, extraction, tool calls), task (does it resolve the user's request), and outcome (does it change the business metric). A task-layer pass with a failing outcome layer is the most common and most expensive finding, and it is invisible if you only test the task.
+3. **Split the golden set three ways:** a dev set for iteration, a regression set that gates releases, and a held-out set that is never used for tuning.
+4. **Define the comparison statistic and the threshold before running the test** — pass rate, mean score, pairwise win rate, cost-weighted — so the result cannot be reinterpreted afterwards.
+5. **Make the harness deterministic:** pin the model, prompt, retrieval configuration, seed, and corpus snapshot, and record all of them with the result. A harness you cannot reproduce produces numbers you cannot act on.
+6. **Run continuous evaluation:** sample production traffic daily into the regression set, with a human-labelled subset, so the set does not fossilise as the product changes.
+7. **Version the harness, the golden set, and the thresholds together,** with a changelog explaining what moved and why.
+
+**Artifacts.** Evaluation contract; metric tree (component / task / outcome); golden-set split; pass thresholds; harness configuration with pinned versions; continuous sampling pipeline; harness changelog.
+
+**Worked example — Corvid.** A single headline metric — deflection correctness — was insufficient, so the framework had three layers: component (retrieval hit@5, tool-call success), task (did the answer resolve the ticket without a human), and outcome (ticket closed without a reopen, CSAT unchanged). The dev set of 300 tickets sampled from the prior quarter was used for iteration; the regression set of 400 curated edge cases gated releases; the held-out set of 150 tickets was run only at acceptance and was the only number quoted in the customer-facing report, because it was the only number that no prompt had ever been tuned against.
+
+**See also — HELM** (Stanford CRFM) argued for evaluation across scenarios with the trade-offs documented, rather than a single headline leaderboard number — the same argument, made for whole-model evaluation rather than for a customer system.
+
+**Watch out for.** A single headline metric. A golden set that doubles as the tuning set. Non-deterministic harness configuration. Thresholds defined after seeing the results. Production traffic sampled into the eval set without a privacy basis. An eval set that a prompt was tuned against until it stopped measuring anything.
+
+**Done when.** A versioned harness produces comparable numbers across releases, all three layers are reported, each pass rule was written down before the result, and the held-out set has never been used for tuning.
+
+---
+
+#### D2. Define evaluation metrics per use case
+
+**Goal.** Metrics that measure the behaviour you were engaged to deliver, each traceable to a definition a customer and an engineer would both recognise.
+
+**How to do it.**
+
+1. **Translate the Phase 0 success criteria into measurable proxies.** If a criterion has no metric, it is not a criterion — it is a hope.
+2. **Define metrics at three granularities:** retrieval (recall@k, context precision), generation (faithfulness, answer relevance, completeness), and outcome (resolution rate, escalation rate, override rate, CSAT delta, time saved).
+3. **Write each metric down precisely enough that two engineers would implement it identically:** the formula, the input fields, the aggregation, and the edge cases.
+4. **Keep faithfulness and correctness separate.** An answer can be faithful to a wrong document, or correct in form while citing something the corpus does not support — both are failures and they need different fixes.
+5. **Cover the behaviours that matter, not only the average:** refusal behaviour, escalation rate, out-of-scope handling, and accuracy on the hardest slice.
+6. **Segment every metric.** An overall 85% can conceal a 40% on the slice that generates most of the complaints.
+7. **Put cost and latency in the same scorecard as quality.** A metric set that cannot express "two points of accuracy for 400ms" produces arguments instead of decisions.
+8. **Plan the slices explicitly:** which slices, how many examples each, and how often each runs.
+
+**Artifacts.** Metric definitions catalogue; metric tree mapped to success criteria; slice plan; combined quality/cost/latency scorecard; metric definition review record.
+
+**Worked example — Meridian Bank.** The metric set for KYC screening was defined by the bank's compliance function rather than by the engineering team. Faithfulness — does the rationale cite the actual CDD clause — was kept separate from correctness — is the risk rating right — because a screening answer can cite a real clause and still reach the wrong conclusion, and the two failures have different owners. The slice that mattered most was high-value commercial accounts: 4% of files, most of the regulatory exposure, run on every regression cycle, while long-tail retail files ran weekly.
+
+**Watch out for.** One accuracy number. Defining a metric after seeing results. Mixing faithfulness with correctness. Reporting averages without slices. Excluding cost and latency from the scorecard. Metrics that cannot be computed from data you actually log.
+
+**Done when.** Every success criterion maps to a written metric definition, every metric is segmented, and the scorecard lets quality, cost, and latency be traded off explicitly.
+
+---
+
+#### D3. Build LLM-as-judge evaluation pipelines
+
+**Goal.** Scale human judgement to thousands of examples without publishing a number you cannot defend.
+
+**How to do it.**
+
+1. **Use a judge only where humans are impractical,** and state the sample size where humans remain the gold standard.
+2. **Write the rubric as explicit, checkable criteria with a scale.** A judge given a vague instruction returns a plausible number with no meaning behind it.
+3. **Choose the judge deliberately:** strong enough for the task, stable across runs, cheap enough for the volume, and ideally not from the same model lineage as the system under test — self-enhancement bias is real and it inflates the score.
+4. **Calibrate against human raters on several hundred examples,** and report agreement overall *and* per category. Agreement below roughly 0.8 on a category means the judge is not usable for that category yet.
+5. **Control the known biases:** position (swap the order of compared outputs and check for flips), verbosity (prefer the longer answer?), self-enhancement, and formatting. Pairwise comparison is affected by fewer of these than absolute scoring and is generally more reliable.
+6. **Control nuisance variance:** temperature 0, the rubric in the prompt, and repeated runs over a sample to measure the judge's own variance.
+7. **Blind the judge** to which system produced an output, and randomise the order of compared pairs.
+8. **Log every judgement with the rubric version, the judge model version, and the raw rationale,** so a change of judge is a visible, versioned event rather than a silent shift in the numbers.
+9. **Route disagreements and high-stakes categories to human review.**
+
+**Artifacts.** Rubric catalogue; judge configuration; calibration report with per-category agreement; bias test results (position swap, verbosity, length-matched subset); judge run log with versions; escalation rules to human review.
+
+**Worked example — Halden & Rowe.** An external LLM judge was structurally impossible: sending privileged clause text to a hosted judge API would breach the firm's confidentiality duty. The judge was therefore a model hosted on the same local workstation, which changed the design productively — the rubric had to be written so a partner could evaluate it on a 20-case sample rather than simply trust it, and the calibration target became partner agreement on that sample. The local judge turned out to be adequate for the narrow question the use case asked, binary clause presence, and for nothing broader, which was the honest scope to publish.
+
+**See also — MT-Bench and Chatbot Arena** (Zheng et al., NeurIPS 2023) established that a strong LLM judge agrees with human preferences on the order of 80% on benchmark-style comparisons, and the follow-up work on judge fairness (2024) documents the position, verbosity, and self-enhancement biases that must be controlled before any judge score is quoted to a customer.
+
+**Watch out for.** A judge with no written rubric. No calibration against humans. Absolute scoring where pairwise would do. Judging with a model from the same family as the system under test. Not blinding order or system identity. Quoting a judge score without the calibration figure attached.
+
+**Done when.** Every judge score ships with a calibration figure, a rubric version, a judge version, and a bias-test result — and the judge is used only where human rating is impractical.
+
+---
+
+#### D4. Curate golden evaluation datasets with customer domain experts
+
+**Goal.** A human-authored, representative, legally clean evaluation set that the customer's own experts own and would defend.
+
+**How to do it.**
+
+1. **Get the domain experts on the schedule early.** Their availability is the longest pole in the plan, and a set written without them reflects what the engineers thought mattered.
+2. **Sample representatively first, then curate.** Draw a stratified sample of real cases across the slices that matter, then filter for clarity and completeness. Random samples alone over-weight the trivial.
+3. **Include the unhappy paths deliberately:** ambiguity, missing information, contradictory sources, out-of-scope requests, adversarial inputs, and every case that previously went wrong.
+4. **Define the expected *behaviour*, not only the expected answer.** For many use cases the correct behaviour is to abstain or escalate, and a golden set holding only correct answers actively penalises a system that correctly refuses.
+5. **Keep it human-authored and quarantined.** Synthetic examples help at scale but must be reviewed, and synthetic data derived from a model's own output degrades the set it is used to judge.
+6. **Get the rights right.** The evaluation set often holds the most sensitive content the customer has — treat it as a controlled artefact with access rules, retention, and a destruction path.
+7. **Size it in two tiers:** a small high-quality set for iteration and a larger set for release gating, and say which is which in every report.
+8. **Maintain it:** retire cases that are no longer representative, add every production incident as a permanent case, and record the provenance of each one.
+
+**Artifacts.** Curation plan and schedule; stratified sampling specification; edge-case catalogue; golden set with provenance for every case; expected-behaviour rubric per case; access, retention, and destruction rules; set changelog.
+
+**Worked example — St. Aldwyn Health.** The golden set was curated by the hospital's clinical pharmacists and two physicians across three sessions, and it recorded the expected *behaviour* rather than a reference summary: for 40% of cases the correct output was "escalate to the treating physician with this flagged finding", because the reviewers' judgement was that a cited, flagged observation was a better output than a confident summary. Every case carried a source-note reference so a clinician could audit the label, and the 412 cases where medication or allergy fields were decisive were flagged as a mandatory slice that ran on every cycle.
+
+**See also — Shumailov et al.** (Nature, 2024) showed that models trained on recursively generated data degrade — the direct reason a golden set must be human-authored, kept out of training pipelines, and quarantined from generation.
+
+**Watch out for.** Curating entirely from the team's intuition. Only easy cases. A golden set containing only correct answers, which penalises abstention. Synthetic cases entering the set unreviewed. Using sensitive production content without access, retention, and destruction rules. A set that never changes while the product does.
+
+**Done when.** Domain experts authored and signed off the set, edge cases and abstention cases are represented, provenance and access rules are documented, and every production incident becomes a permanent case.
+
+---
+
+#### D5. Implement automated eval harnesses
+
+**Goal.** Evaluations that run without a human in the loop, on every change and on a schedule, producing results nobody has to interpret by hand.
+
+**How to do it.**
+
+1. **Treat the harness as a first-class artifact** — its own repository, version, review process, and CI pipeline.
+2. **Structure it as three commands over one code path:** against a local checkpoint (fast, per commit), against a deployed candidate (slow, pre-release), and against sampled production traffic (continuous). Same cases, same code, different targets.
+3. **Make it hermetic:** pin model, prompt, retrieval configuration, seeds, and the corpus snapshot, and record all of them with the result.
+4. **Store structured artefacts** — per-case outputs, scores, traces, token counts, latencies — so runs are comparable and diffable rather than trapped in a terminal window.
+5. **Fail the build on regression,** with the threshold decided in advance: which metrics, at what magnitude, block the release.
+6. **Keep the fast set fast.** If the per-commit run takes twenty minutes, people will learn to skip it, and the harness stops being a gate.
+7. **Generate the report automatically,** per slice and per metric, with the delta against the baseline. A harness that produces a number nobody reads is a cost with no return.
+8. **Protect the cases:** the harness must not be able to train on the cases it evaluates or leak gold answers into prompts during evaluation.
+
+**Artifacts.** Harness repository and CI configuration; pinned-version configuration; result schema and storage; gating thresholds; per-commit and scheduled workflows; automated report generation; cost per run tracked.
+
+**Worked example — Meridian Bank.** The harness ran entirely on the bank's own hardware — no evaluation traffic left the building, which was a condition of the engagement. Because the corpus contained KYC documents with PII, the harness processed them through the same redaction path as production and stored its results inside the bank's environment, sharing only aggregate metrics and the report with the vendor team. The release gate was three things: faithfulness against the CDD clause, a hard zero tolerance on PII in outputs, and no regression on the high-value-account slice. Everything else was reported but did not block.
+
+**Watch out for.** A harness that runs only when someone remembers. Unpinned configuration, so two runs cannot be compared. Gates defined after the fact. Results kept only in a terminal window. Sharing code paths with production in a way that leaks gold answers into prompts. Running the full suite on every commit so people learn to skip it.
+
+**Done when.** The harness runs on commit, on release, and on a schedule from pinned configuration, stores per-case artefacts, and blocks a release automatically on a pre-agreed threshold.
+
+---
+
+#### D6. Conduct red-teaming exercises
+
+**Goal.** Find the ways an adversary — or an unlucky user — breaks the system, before a customer does.
+
+**How to do it.**
+
+1. **Build the threat model before the attacks.** Who is the adversary, what do they want, and what are the entry paths: the user, the retrieved document, a tool's return value, another tenant, the model's own context, or the data itself.
+2. **Use published taxonomies so you do not improvise your own blind spots** — OWASP's Top 10 for LLM Applications, MITRE ATLAS for adversarial ML techniques, and NIST's Generative AI Profile for the risk framing.
+3. **Test injection at every trust boundary,** because that is where it lands: a document in the corpus, a claim note, a web page, an email body, a tool result. The defence is the same each time — treat retrieved content as data, delimit it, and never let it define the instruction hierarchy.
+4. **Test PII leakage in both directions:** can the model be made to reveal another user's data, another tenant's data, or another matter's content; and can it be made to emit PII it was given.
+5. **Test excessive agency:** can it call a tool it should not, call it more times than the policy allows, or take an irreversible action without confirmation.
+6. **Run automated attacks at volume and expert sessions with depth.** Automated suites find the obvious; a human attacker finds the compound.
+7. **Log every attempt** with the technique, the boundary targeted, the outcome, and a severity, then fix, re-test, and record the closure.
+8. **Red-team the surrounding system, not just the model.** The retry logic, the cache, the fallback chain, and the log pipeline are all attack surfaces.
+
+**Artifacts.** Threat model; red-team plan and scope; attack catalogue mapped to a published taxonomy; attack corpus and scripts; findings log with severity and status; mitigation verification results; scheduled re-test.
+
+**Worked example — Northwind Mutual.** The highest-severity finding came from the least obvious path: a claim file uploaded by a claimant contained embedded text instructing the model to approve the claim regardless of policy, and because the note sat in the context beside the system prompt without an explicit data delimiter, the model partially complied and produced a coverage determination citing a clause that did not exist. The fix was structural rather than prompt-based — every retrieved document was wrapped as untrusted data with an explicit statement that its contents could not change the instructions — and the attack became a permanent regression case. That one finding justified more of the launch budget than every quality metric combined.
+
+**See also — OWASP's LLM Top 10 and MITRE ATLAS** supply the taxonomy that keeps the attack catalogue complete rather than personal, and NIST AI 600-1 sets the expectation that findings are tracked to closure with severity.
+
+**Watch out for.** Testing only the model and not the system around it. Assuming retrieved content is trusted because it came from your own database. Red-teaming once at the end instead of continuously. Fixing findings without a re-test. Recording findings without severity, so nobody can prioritise them. Treating red-teaming as a one-off deliverable rather than a standing capability.
+
+**Done when.** Every finding has a severity, an owner, a status, and a verified mitigation, and the attack corpus is re-run automatically on every release.
+
+---
+
+#### D7. Test for failure modes
+
+**Goal.** Characterise how the system fails, because the failure modes determine what the guardrails and the human process have to catch.
+
+**How to do it.**
+
+1. **Enumerate the failure modes before testing:** hallucination, fabricated citations, refusing when it should answer, answering when it should refuse, sycophancy, instruction-following gaps, over-confidence, format violations, and drift on unusual inputs.
+2. **Test the boundary behaviours explicitly** — ambiguity, insufficient context, conflicting sources, and requests that are almost but not quite in scope.
+3. **Measure hallucination with a denominator:** hallucinated citations per hundred answers, not a qualitative impression — and measure harmful hallucinations separately, because that is a much smaller and much more serious number.
+4. **Test sycophancy** by embedding a wrong premise in the question, and by repeating the question with an authoritative-sounding but incorrect context.
+5. **Test instruction following adversarially,** with embedded instructions in retrieved content, in tool output, and in user input that conflict with the system prompt.
+6. **Test multilingual and out-of-distribution inputs** if the system will meet them. The failure is rarely a crash — it is confident, fluent, wrong.
+7. **Measure refusal behaviour as a feature:** false refusals (should have answered) alongside false answers (should have refused). Both are failures, and they trade off against each other.
+8. **Convert every failure mode found into a guardrail rule, a golden case, or an explicitly accepted risk.**
+
+**Artifacts.** Failure-mode catalogue with definitions; test suite per failure mode; rates with denominators; boundary-behaviour test set; multilingual and out-of-distribution results; remediation mapping to guardrails, cases, or accepted risks.
+
+**Worked example — Corvid.** The interesting failure was not hallucination but false refusal: the assistant declined questions about refunds and account limits, which is exactly the category the business needed to deflect, so the system was confidently declining work rather than doing it. The fix was a scope router that classified the request before the model saw it, plus a narrower refusal policy with a handoff offer instead of a flat no. Both rates were then tracked side by side — false-refusal rate and false-answer rate — because tuning one without the other simply moves the error somewhere less visible.
+
+**Watch out for.** Measuring hallucination without a denominator. Testing refusal only in the safe direction. Testing multilingual performance on translated inputs rather than natively authored ones. Fixing a failure without adding a regression case. Accepting a risk silently.
+
+**Done when.** Every failure mode has a measured rate, a definition, and a disposition — guardrail, test case, or accepted risk — and the false-refusal and false-answer rates are tracked against each other.
+
+---
+
+#### D8. Perform latency and throughput load testing
+
+**Goal.** Establish the real performance envelope under a realistic load profile, and find the knee before production finds it for you.
+
+**How to do it.**
+
+1. **Build the load profile from production data,** not from a load generator's defaults: request mix, prompt lengths, retrieved context sizes, concurrency shape, and the burst pattern.
+2. **Test at three levels** — single-request latency (TTFT and end to end), concurrent-user behaviour, and a sustained soak long enough to expose memory drift, cache growth, and connection leaks.
+3. **Record exactly the metrics you will monitor in production:** TTFT, end-to-end p50/p95/p99, tokens per second, error rate, queue depth, cache hit rate. If the test metrics differ from the production metrics, the test tells you nothing.
+4. **Include the cold path:** cold start, scale-up from zero, and the first request after a deploy — measured in the production configuration, not on a pre-warmed instance.
+5. **Push past the knee deliberately and record where it is,** because that number becomes the autoscaling trigger and the capacity plan.
+6. **Test the degraded configurations:** fallback model engaged, secondary provider, cold cache, slow retrieval. The system should degrade predictably rather than collapse.
+7. **Cap the cost of the test.** Load tests against metered APIs have produced five-figure surprise bills.
+
+**Artifacts.** Load profile derived from production data; scenario and ramp plan; results with percentiles; knee analysis and capacity model; degradation test results; cost record for the test window.
+
+**Worked example — St. Aldwyn Health.** The load profile was deliberately unrepresentative of the average, because a clinical system's peaks are not its means: the site saw a morning batch of 60 discharge summaries at the same time as an ED site that could request a summary within seconds of a patient arrival. The tests found the batch and the interactive request contending for the same GPU, with the interactive p95 going from 900ms to 7s. The fix was scheduling discipline — batch in a reserved window, interactive with priority — which is a policy change rather than a hardware purchase, and it avoided the 8-to-12-week GPU lead time entirely.
+
+**Watch out for.** A synthetic profile with short prompts and low concurrency. Testing only the warm path. Averaging percentiles across percentiles. Running a load test against a metered API without a spend cap. Declaring success at a load the customer will never send.
+
+**Done when.** The envelope is measured against a production-derived profile, the knee and the cold path are documented, the degraded configurations were exercised, and the capacity model carries the same numbers the production dashboards use.
+
+---
+
+#### D9. Conduct cost analysis
+
+**Goal.** Know what a successful outcome costs, where the money goes, and which lever moves it.
+
+**How to do it.**
+
+1. **Measure at the level the business recognises:** cost per resolved ticket, per adjudicated claim, per KYC review. Cost per request is a diagnostic, not a business number.
+2. **Decompose the cost:** input tokens, output tokens, cached tokens, embedding tokens, retrieval and vector-store cost, guardrail and judge calls, and infrastructure. The dominant term is rarely where people look.
+3. **Normalise per outcome,** dividing by successful outcomes rather than total requests, so a cheap system that answers nothing does not look efficient.
+4. **Compare against the baseline the business already knows** — loaded cost per agent hour, per claim handled, per review performed. The comparison is the entire argument.
+5. **Model scenarios, not just the current month:** volume growth, a new traffic mix, a provider price change, and what happens if the model mix or the cache hit rate shifts. A cost number without sensitivity is a snapshot.
+6. **Order the levers by cost to implement:** caching, routing to smaller models, prompt-length reduction, context trimming, batching, and quantisation — each with an estimated saving and an estimated quality risk.
+7. **Put an enforceable ceiling in place:** a per-request token cap, a daily budget, and a path that sheds or degrades rather than quietly overspending.
+8. **Re-run the analysis on a schedule** against production telemetry, because unit prices change and traffic mixes drift.
+
+**Artifacts.** Cost model with decomposition; baseline comparison; sensitivity scenarios; optimisation backlog with estimated savings and quality risk; budget and guardrail configuration; scheduled re-costing report.
+
+**Worked example — Corvid.** The ceiling was $0.04 per request, and the decomposition showed that 38% of spend was the large fixed system-prompt prefix repeated on every request, that 31% of requests were cache hits still billed at full price, and that the remainder was output tokens on long-answer classes. The backlog, in order: cache the prefix through provider prompt caching (near-zero implementation cost), route simple classes to a smaller model, trim retrieved context from six articles to four, and quantise embeddings. Together these took the request cost from $0.061 to $0.038 and the monthly bill from about $22,000 to about $13,700 — and the sensitivity model showed the ceiling breaking at roughly 19,000 tickets a day, which was the number the CFO used to decide whether the next volume increase required a renegotiation or a re-architecture.
+
+**Watch out for.** Reporting cost per request when the business buys an outcome. Looking at the provider invoice instead of the decomposition. No baseline comparison, so the number means nothing. A ceiling that only reports. Forgetting that guardrail and judge calls add model usage to every request.
+
+**Done when.** Cost per outcome is decomposed, compared against a baseline, sensitivity-tested, and enforced by a budget that can actually stop the spending.
+
+---
+
+#### D10. Test integration endpoints
+
+**Goal.** Every integration behaves predictably when things go wrong — including the customer's systems.
+
+**How to do it.**
+
+1. **Test the contract first:** request and response schemas, field optionality, error shapes, and versioning rules, asserted in CI so a schema change cannot ship silently.
+2. **Test the failure paths explicitly** — timeout, connection refused, DNS failure, a 500 with an HTML body, a truncated response, a slow-but-not-timed-out response, and a valid response with wrong content.
+3. **Test retry semantics:** does the retry happen, is it idempotent, is the backoff present, and how many attempts occur before abandonment? A model retrying a write tool without idempotency creates duplicates.
+4. **Test rate limiting at the boundary** — what happens at the limit, is the client informed, and does the retry make it worse?
+5. **Test authentication and authorisation:** expired credentials, credentials rotated mid-flight, a token for the wrong scope, and a valid token for the wrong tenant.
+6. **Test the customer's systems, not only yours.** Their API can be down, slow, or schema-drifted, and your system must behave in all three cases.
+7. **Trip the circuit breakers and fallbacks deliberately,** and confirm the system degrades to a defined state rather than hanging.
+8. **Test the user's path through a failure:** does the error reach the user as a clear message, or as a silent timeout?
+
+**Artifacts.** Contract test suite; failure-path test matrix; retry and idempotency verification; authentication and authorisation tests; customer-side dependency tests; circuit-breaker and fallback drill results; error-path UX confirmation.
+
+**Worked example — Northwind Mutual.** The claims system was the critical dependency, and it had a nightly maintenance window that returned HTTP 503 with an HTML body. The application's error handler assumed JSON and rendered a blank screen, which adjusters reported as "the tool is slow" rather than "the tool is down" — and that misdiagnosis cost hours before anyone looked at the dependency's status page. Contract tests now assert the error shape, a nightly probe runs against the real dependency outside business hours, and the interface distinguishes "claims system unavailable" from "model response slow" in the message the adjuster reads.
+
+**Watch out for.** Testing only the happy path and the timeout. Assuming the customer's API returns JSON. No idempotency keys on write tools. Authentication failures surfacing as 500s. Fallback paths never actually tripped. Rate-limit retries with no backoff.
+
+**Done when.** Every integration has contract tests, a failure-path matrix, verified retry and idempotency behaviour, and a drilled fallback — and the failure reaches the user as a defined, distinguishable state.
+
+---
+
+#### D11. Execute acceptance testing against customer success criteria
+
+**Goal.** A fair, pre-agreed test that decides go or no-go, run by the people who will live with the result.
+
+**How to do it.**
+
+1. **Write the acceptance criteria before the build,** in the customer's language, with a number and a named owner for each. A criterion that cannot be tested should be rewritten until it can.
+2. **Test in the customer's real environment with the customer's real data,** under the customer's real access controls. A demo on sanitised data proves less than a test on the real thing.
+3. **Compare side by side against a baseline** — the previous process, the human-only path, or a model-versus-model comparison on the same cases. A baseline-free number invites the claim that it is impressive.
+4. **Include structured human evaluation** by the people who do the work, sampled rather than anecdotal, and report agreement between evaluators.
+5. **Test the whole workflow,** not just the model: the user's task, the system's response, the handoff, and what the user does next.
+6. **Test the volume the customer will actually run,** including the burst and the backlog case, not a convenient sample.
+7. **Pre-agree what a failed criterion does** — what is waived, by whom, with what compensating control, and recorded in writing.
+8. **Keep the acceptance record as a signed artefact with the evidence attached,** because it is the document that will be reviewed if something goes wrong later.
+
+**Artifacts.** Acceptance criteria document with owners; test environment description; side-by-side comparison report; structured human evaluation with inter-rater agreement; waiver record; signed acceptance report.
+
+**Worked example — Northwind Mutual.** Acceptance ran on the insurer's own claims system with a panel of six senior adjusters and the claims supervisor, over 180 claims drawn from the prior quarter that the system had never seen. The comparison was against the adjusters' own prior handling times for the same claim types, and the result that mattered was not raw speed but agreement: the panel accepted the system's coverage determination without edit in 78% of cases, alongside a measured account of the 22% it disagreed with — which was more useful to the insurer than the average time saved, and became the input to the Phase 6 optimisation backlog.
+
+**Watch out for.** Criteria written after the demo. Testing on sanitised data in a demo environment. A baseline-free number. Anecdotal feedback presented as evaluation. Acceptance run on a friendly subset. Waivers granted silently. Testing the model rather than the workflow.
+
+**Done when.** Every criterion has a number, an owner, and a test; the test ran in the customer's environment on the customer's data against an agreed baseline; and a signed acceptance report exists with its waivers attached.
+
+---
+
+#### D12. Run canary deployments for initial production traffic
+
+**Goal.** Prove the system behaves in production with real users, on a slice small enough that a mistake is survivable.
+
+**How to do it.**
+
+1. **Start with a shadow run** — mirror real traffic through the new system without serving it, and compare against the live behaviour. Shadowing finds failure modes without exposing a single user.
+2. **Then canary: 1% → 5% → 25% → 50% → 100%,** with a minimum duration at each step and an automated rollback trigger rather than a manual decision.
+3. **Define the rollback trigger before the canary starts,** with a number for each: a latency breach, an error-rate breach, a cost breach, a quality-regression signal, or a guardrail trip rate above threshold.
+4. **Make the canary representative.** The traffic share must include the awkward cases; a canary of only mainstream traffic proves nothing about the tail.
+5. **Watch the business metrics, not only the technical ones:** deflection rate, reopen rate, CSAT, escalation rate, time saved. A canary that is technically green and operationally useless is still a failure.
+6. **Keep the incumbent serving traffic throughout,** so a rollback is a routing change rather than a deployment.
+7. **Have the on-call engineer and the business owner both watching,** with an abort procedure both can execute without escalation.
+8. **Run it across a full business cycle** — a Monday-only canary misses the weekend mix, and one hour misses the burst.
+
+**Artifacts.** Shadow comparison report; canary plan with step sizes and durations; rollback trigger definitions; live metrics during the canary; abort procedure; post-canary go/no-go record.
+
+**Worked example — Corvid.** The canary ran inside the existing support workflow, so every canary ticket was handled by the assistant with a human agent reviewing — which made a rollback a matter of returning the routing rule rather than deploying anything. The automated trigger fired on day two: cost per successful ticket rose 18% against baseline, above the 15% threshold, and the system rolled back without a deployment. The cause was a retrieval configuration change that increased context size and, with it, input tokens. The lesson was that the rollback trigger must be tied to a business metric rather than to an error rate, because nothing technically failed.
+
+**Watch out for.** Canarying without a shadow step. Rollback triggers with no numbers. A canary that excludes the tail. Judging the canary on technical metrics only. Rolling forward because "the errors look unrelated". A canary of one hour on a Monday.
+
+**Done when.** The shadow run, the stepped canary, the automated triggers, and the business metrics are all on record, the rollback path is instant, and the go/no-go decision is written down with its evidence.
+
+---
+
+#### D13. Conduct stakeholder demos
+
+**Goal.** Get three different audiences to the right conclusion, and leave each with the decision they own.
+
+**How to do it.**
+
+1. **Prepare three versions, not one:** an executive demo (workflow, number, risk, ask), a technical deep-dive (architecture, retrieval, guardrails, trade-offs, failure modes), and a live session on real usage.
+2. **Build the executive narrative around the workflow and the baseline comparison,** not around the model. Executives are buying a change to how work gets done.
+3. **Show the failures in the technical deep-dive.** A demo showing only successes destroys the credibility you will need when something breaks; showing a caught failure alongside the control that caught it is the strongest demonstration available.
+4. **Use a scripted scenario plus a live component,** and pre-seed the live component so the first request is not the worst possible one.
+5. **Prepare for the hostile questions you cannot answer** — data residency, model training, liability, what happens when it is wrong — and answer them plainly rather than deferring.
+6. **Keep the artefacts from the demo:** the numbers, the caveats, and the decisions being requested, with a named owner for each.
+7. **Follow up in writing within a day,** because the decision made in the room and the decision remembered a week later are different decisions.
+
+**Artifacts.** Three demo scripts or decks; scenario scripts; live environment checklist; question bank including the hostile questions; demo artefact pack; written follow-up with owners and dates.
+
+**Worked example — Halden & Rowe.** The partner-facing demo was deliberately designed around a failure. It showed the assistant correctly declining to flag a clause whose precedent sat outside the reviewed precedent set, and a partner asking it to flag a clause from another matter — to which it replied that the request was outside that matter's index and the partner would need to open it. Demonstrating a refusal, in front of the people whose professional duties depend on that refusal, was what converted the room. A demo showing only successful clause flags would have demonstrated the opposite of what they needed to see.
+
+**Watch out for.** One demo for three audiences. Only successes. Improvised live requests. Unprepared answers on residency or liability. No written follow-up, so the caveats fade and only the headline remains.
+
+**Done when.** Each audience saw a version built for them, the failure modes were shown rather than hidden, the questions were answered in writing, and every decision requested has a name and a date against it.
+
+---
+
+#### D14. Validate guardrails under adversarial conditions
+
+**Goal.** Prove the controls hold against real attacks, including ones designed by someone who knows your architecture.
+
+**How to do it.**
+
+1. **Test each guardrail against its own failure modes:** PII redaction against a reformatted identifier, injection defence against a nested instruction, the domain validator against a citation that is almost right, and the abstention path against a question that is almost answerable.
+2. **Test the known bypasses** — encoding tricks, multilingual variants, role framing, and prompt templates published for attacking exactly this class of system.
+3. **Test the layers in combination,** including multi-step attacks that ride inside a legitimate tool result or reach an unguarded surface through the fallback path.
+4. **Test in the deployed configuration, not in isolation** — behind the real prompt, the real retrieval, and the real cache. A guardrail that works in a unit test and fails in the pipeline is not a control.
+5. **Test the PII filter against the customer's actual data formats,** including free-text notes where names appear with no pattern to match.
+6. **Measure the block rate and the false-block rate.** A guardrail that blocks 30% of legitimate traffic has failed differently — and the business feels it first.
+7. **Verify the escalation path works:** when a guardrail trips, does a human receive a usable item, within a time the business can accept?
+8. **Re-run the adversarial suite on every release and after every prompt or model change,** and treat a regression as a release blocker.
+
+**Artifacts.** Guardrail test matrix per layer; attack corpus with expected outcomes; bypass test results; false-positive measurements; escalation path verification; per-release adversarial regression results.
+
+**Worked example — St. Aldwyn Health.** The PHI filter was validated against real clinical text rather than synthetic form fields, with a test set that deliberately included clinicians' shorthand and free-text notes where a patient's name appeared with no template pattern. The false-block rate mattered more than the block rate, because a blocked discharge summary means a physician waits for a manual one — the measured 0.4% false-block rate was accepted by the clinical safety officer with a monitoring rule attached, while 100% blocking of seeded identifiers was required. The clinical domain validator was then tested with a citation to a real medication at the wrong dose, which passed the identifier check and was caught only by the dose rule — that finding produced the additional rule.
+
+**Watch out for.** Testing guardrails in isolation instead of in the pipeline. Measuring only the block rate. Assuming a prompt-based injection defence is a control. Not re-running the suite after a model or prompt change. A guardrail that trips into a dead end rather than to a human. Disabling a noisy rule instead of narrowing it.
+
+**Done when.** Every guardrail layer has a bypass test and a false-positive measurement, the adversarial suite runs on every release, and every trip lands in a usable human queue.
+
+---
+
+#### D15. Document evaluation results in customer-facing format
+
+**Goal.** A report the customer can act on, defend to their own regulators, and read without an engineer in the room.
+
+**How to do it.**
+
+1. **Lead with the business criteria and the baseline comparison,** then the method, then the caveats. The reader's first question is "does this work for us", not "what is your recall".
+2. **Report every metric with its definition, sample size, segment, and confidence interval** where the sample allows one. A percentage without a denominator is not a finding.
+3. **Show the slices, including the failing ones.** A report of averages only is a report that hides its own risks.
+4. **Separate measured from estimated** and label every figure accordingly.
+5. **State the limitations and the known failure modes explicitly,** using the failure taxonomy from D7. A report that admits what it cannot do is more credible than one that claims everything.
+6. **Include recommendations with owners, effort, and rank** by cost per point of quality, and mark which are already fixed.
+7. **Attach the evidence** — raw per-case results, judge calibration, test logs, red-team closure — and version it with the report.
+8. **Have the customer's domain experts read it before it is presented.** A report that surprises the domain experts is a report about to lose the room.
+
+**Artifacts.** Customer-facing evaluation report; metric appendix with definitions and samples; slice results; limitations and failure taxonomy; recommendations with owners; raw artefact pack; domain-expert review record.
+
+**Worked example — Meridian Bank.** The report was structured for the bank's compliance function first and engineering second, in three sections: whether the system met the criteria defined in Phase 0 (with sample sizes and the two criteria waived, and why), what the system does when it is uncertain (with the false-answer and false-refusal rates and the escalation policy), and the evidence pack (judge calibration, red-team findings with closure status, complete per-case results). The waiver record was included rather than omitted, on the view that a bank which discovers a waiver later will treat the entire report as unreliable.
+
+**Watch out for.** A report written for an audience of engineers. Percentages without denominators. Only the passing slices. Mixing measured and estimated figures. Recommendations with no owner. Omitting the waivers. Presenting results the domain experts have not seen. Quoting a judge score without its calibration.
+
+**Done when.** The report leads with business criteria and a baseline, shows the failing slices, separates measured from estimated, lists limitations and waivers, and ships with a versioned evidence pack the domain experts have reviewed.
+
+---
+
+#### D16. Obtain formal customer sign-off on deployment acceptance criteria
+
+**Goal.** A signed, dated record of what was accepted, by whom, and against what — so the next conversation about a limitation has a shared factual basis.
+
+**How to do it.**
+
+1. **Define exactly what is being signed:** the acceptance criteria, the results against them, the known limitations, the waivers, and the monitoring and escalation commitments that follow.
+2. **Get the right signatories** — the business owner who owns the risk and the control owner who owns the protection — and confirm each has the authority to accept what they are being asked to accept.
+3. **Make the acceptance conditional and the conditions explicit:** monitoring is live, an incident process exists, a named contact owns the first response, and a review date is set.
+4. **Record residual risk explicitly.** An unsigned "known issue" is worse than a signed one, because nobody is accountable for it.
+5. **Attach the evidence to the signature,** so the artefact and the signature travel together.
+6. **Set a re-acceptance trigger** — a material model change, a new use case, a regulatory change — so the sign-off does not silently extend to future scope.
+7. **Keep the record retrievable and versioned,** and make sure the operational teams know what was accepted and what was not.
+8. **Be explicit about what was not tested.** A sign-off covering untested scope is a liability created for someone else.
+
+**Artifacts.** Acceptance criteria and results annex; sign-off document with signatories and dates; residual risk register; monitoring and escalation commitments; re-acceptance triggers; signed artefact in the engagement record.
+
+**Worked example — St. Aldwyn Health.** Sign-off was obtained jointly from the Chief Medical Officer and the clinical safety officer, and the record explicitly stated that no output reached a patient's record without clinician review, that the physician-in-the-loop remained in place, and that a re-acceptance review would be triggered by any change to the prompt, model, or guardrail configuration. A subtle point was recorded at the same time: the acceptance covered the 412-case golden set and the everyday clinical text it was drawn from, and did not cover imaging interpretation, which was out of scope and documented as such — so that a later request to extend into imaging started from an explicit boundary rather than an assumed one.
+
+**Watch out for.** Sign-off from a single business owner without the control owner. Accepting untested scope. Missing residual risk. No re-acceptance trigger. A sign-off with no attached evidence. Treating sign-off as the end of the FDE's involvement.
+
+**Done when.** The signed record names what was accepted, with what evidence, with what residual risk and waivers, and with a re-acceptance trigger and a review date attached.
+
+---
+
+#### D17. Define production SLOs
+
+**Goal.** Agree the numbers that define "working" before anyone has to argue about them during an incident.
+
+**How to do it.**
+
+1. **Derive SLOs from the user's experience,** not from the infrastructure: an adjuster's workflow, a physician's read, a customer's ticket.
+2. **State each SLO with a measurement method and a window** — "X% of requests within Y ms over Z" — and state where it is measured.
+3. **Set a quality SLO alongside the technical ones:** a target for task success, a cap on false answers, a floor on escalation, and a target on human override rate.
+4. **Set cost SLOs too,** so the cost guardrails have a defined trigger and a defined action when the trigger fires.
+5. **Define error budgets and the consequence of exhausting one** — what continues, what pauses, and who decides.
+6. **Express availability as the user's experience of success,** not as uptime: a system that answers wrongly 5% of the time is not 95% available.
+7. **Write the SLOs into the monitoring configuration** so the alerts fire from the same definitions, with one source of truth.
+8. **Agree a review cadence,** because SLOs set once at go-live drift as the product changes.
+
+**Artifacts.** SLO document with definitions and windows; error budget policy; quality and cost SLOs; alert rules derived from the SLOs; dependency SLOs for customer systems; review cadence and owner.
+
+**Worked example — Northwind Mutual.** The SLO was written as a workflow statement rather than a service statement: "a coverage determination is available to the adjuster within 3 seconds for 95% of claim submissions during business hours, and no more than 2% of determinations are escalated for missing information." The second clause mattered more than the first, because it bounded the behaviour the insurer's compliance function cared about, and it gave the error-budget discussion a concrete subject — when escalation exceeded 2%, new submissions paused and the gap was reviewed rather than absorbed silently. A technical uptime SLO alone would have shown a healthy system throughout every episode the insurer actually complained about.
+
+**Watch out for.** SLOs expressed as uptime only. A p95 with no window or denominator. No quality SLO. An error budget with no consequence attached. SLOs the alerting configuration does not use. SLOs that contradict the customer's own service commitments.
+
+**Done when.** Every SLO has a number, a window, a measurement point, and an owner; quality and cost SLOs exist alongside the latency ones; the error budget has a defined consequence; and the alerts fire from the same definitions.
+
+---
+
+#### D18. Prepare the go-live checklist
+
+**Goal.** A single gate that says whether we are ready to go live, and that nobody has to interpret in the middle of an incident.
+
+**How to do it.**
+
+1. **Assemble the checklist as a hard gate with a named owner and evidence for every line:** monitoring live and verified by a real alert firing, alerts routed to a reachable rota, rollback rehearsed in the last week, on-call staffed, runbooks current, and the support team briefed.
+2. **Test the alerting path rather than configuring it** — deliberately trigger each alert and confirm it reaches a human in a sensible time.
+3. **Confirm the rollback path is rehearsed, not documented.** An unrehearsed rollback has a success rate close to zero on the day you need it.
+4. **Make the go-live support model explicit:** who the customer contacts, in which channel, within what time, and for how long after go-live.
+5. **Include the customer-side dependencies in the checklist** — credentials, network rules, data access — each with a customer owner, because these are the items that most often block a launch and they are not yours to fix.
+6. **Include a communication plan:** what the customer tells their users on day one, and what happens if they need to pause the feature.
+7. **Include a pause mechanism and the criteria for using it,** so pausing is a normal, pre-authorised action rather than a debate.
+8. **Hold the go-live as a decision meeting with all owners present,** and record the decision with the date and the evidence.
+
+**Artifacts.** Go-live checklist with owners and evidence per line; alert test results; rollback rehearsal record; support model and rota; customer dependency checklist; communication plan; pause criteria; signed go/no-go decision record.
+
+**Worked example — Corvid.** The checklist that mattered was the customer-side one: the Zendesk permissions change, the Confluence space export, the two allow-listed email domains, and the webhook pointing at the vendor's endpoint — each with a name on the customer side, because the support platform's admin rights belonged to somebody in Corvid's IT team who had never heard of the project. The other item was the deliberate alert test: at 8pm on the eve of go-live, each of the nine alerts was triggered in turn and confirmed to reach the on-call rotation, and one turned out to be misrouted to a distribution list nobody read — found and fixed that evening rather than in the first week of production.
+
+**Watch out for.** A checklist with no owners. Alerts configured but never fired. A rollback path that has never been run. No pause mechanism. Customer-side dependencies assumed rather than confirmed. Going live without the support team briefed on what the product does and does not do. No post-launch review date.
+
+**Done when.** Every checklist line has an owner and evidence, the alerts were fired and confirmed, the rollback was rehearsed, the customer dependencies are signed off by the customer's own owners, and the go/no-go decision is recorded with a review date.
+
+---
+
+#### Documented Cases Referenced
+
+Publicly reported cases used throughout Pillar D, cited for the decision pattern each illustrates.
+
+| Case | Year | Point it supports | Used in |
+|------|------|-------------------|---------|
+| **MT-Bench / LLM-as-a-Judge** (Zheng et al., NeurIPS) — a strong LLM judge agrees with human preferences on the order of 80% on benchmark-style comparisons | 2023 | A judge is a usable instrument — if it is calibrated | D3 |
+| **Judge fairness research** (Wang et al.) — documented position, verbosity, and self-enhancement biases in LLM judges | 2024 | Order, length, and family must be controlled before quoting a judge | D3 |
+| **RAGAS** (Es et al.) — faithfulness, answer relevance, and context precision/recall as separate RAG metrics | 2023 | Retrieval and generation quality are different measurements | D2 |
+| **Giskard's RAG Triad and slice-based testing** — testing the corpus population where the system fails, not the average | 2023 | Slices are where the defects live | D2, D5, D6 |
+| **HELM** (Stanford CRFM) — evaluation across scenarios with documented trade-offs rather than a single headline number | 2022–23 | Report the whole picture, not one metric | D1, D15 |
+| **OWASP Top 10 for LLM Applications** — prompt injection, sensitive information disclosure, excessive agency, and the rest | 2023, updated 2025 | Use a published attack taxonomy instead of inventing one | D6, D14 |
+| **NIST AI RMF** and **NIST AI 600-1 Generative AI Profile** — govern, map, measure, manage; the reference for risk documentation, measurement, and go-live evidence | 2023, 2024 | Evaluation is a governance artefact, not a report | D15, D17, D18 |
+| **SWE-bench Verified** — a human-validated benchmark, and the reminder that "resolved" and "correct" are different claims | 2024 | Never present a benchmark-style number as a business outcome | D11, D15 |
+| **Constitutional AI** (Bai et al.) — critique against explicit written principles rather than against a human's judgement each time | 2022 | Principles can be turned into rubrics and self-checks | D3, D14 |
+| **Model collapse on recursively generated data** (Shumailov et al., Nature) — models trained on recursively generated data degrade | 2024 | A golden set must be human-authored and quarantined | D4 |
+| **METR time-horizon evaluations** — measuring how long an agent can work reliably before failing | 2025 | Step budgets and failure rates are measurable properties | D7, D17 |
+| **Reported clinical AI agent incident** (Moffitt Cancer Center, 2025, as reported) — a deployed patient-facing AI gave incorrect guidance about a chemotherapy protocol | 2025 | Go-live includes accountability, monitoring, and pause criteria — not only accuracy | D16, D18 |
 
 </details>
 

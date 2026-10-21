@@ -283,3 +283,4 @@ Every alert needs: a threshold that is meaningful, an owner, a severity, a runbo
 - Previous: [Phase 4 — Evaluation & Red-Teaming](04-evaluation-and-red-teaming.md)
 - Next: [Phase 6 — Production Optimization](06-production-optimization.md)
 - Source reference: [FDE-Responsibilities.md — Pillar D (go-live) and Pillar F (knowledge transfer)](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar D](../FDE-Responsibilities.md) expands the go-live tasks — acceptance testing, canary rollout, stakeholder demos, SLOs, customer sign-off, and the go-live gate — as step-by-step procedures with the five worked business cases and twelve publicly documented reference cases.
