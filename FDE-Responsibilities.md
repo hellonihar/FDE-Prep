@@ -1,6 +1,6 @@
 # Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 2.5
+**Version:** 2.6
 **Last Updated:** 2026-10-21
 **Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
@@ -51,7 +51,7 @@ The role decomposes into seven pillars:
 
 #### Case Index
 
-Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), Pillar D (evaluation), and Pillar E (production operations), with their infrastructure, model, evaluation, and operational shapes fixed there.
+Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), Pillar D (evaluation), Pillar E (production operations), and Pillar F (knowledge transfer), with their infrastructure, model, evaluation, operational, and handover shapes fixed there.
 
 | # | Case | Sector & Scale | The Ask | Hard Constraint | Instructive Because |
 |---|------|----------------|---------|-----------------|--------------------|
@@ -2698,8 +2698,22 @@ Publicly reported cases used throughout Pillar E, cited for the decision pattern
 
 ### Pillar F: Playbooks, Reusable Patterns & Knowledge Transfer
 
+> **Phase playbook:** [AI-SDLC Phase 5 — Go-Live & Handoff](AI-SDLC/05-go-live-and-handoff.md) covers the handover as a gated phase with runbooks, training, and ownership transfer. This section is the *how* — procedures, templates, and worked cases.
+
 <details>
-<summary><b>16 core tasks</b> (click to expand)</summary>
+<summary><b>16 core tasks — detailed breakdown</b> (click to expand)</summary>
+
+#### Case Index
+
+The same five cases carry into knowledge transfer, with their handover shape fixed here. Read this table before planning the handover.
+
+| # | Case | Handover Shape | Team to Enable | Binding Constraint | Teaches |
+|---|------|----------------|----------------|--------------------|---------|
+| **1** | **Northwind Mutual** | Hybrid: customer platform team runs the platform, vendor keeps the model and index | 2 platform engineers; 400 adjusters as end users | Regulated decisions; auditors ask why; no customer data to vendor tooling | For a regulated customer the handover artefacts are ADRs and runbooks, not slides |
+| **2** | **Meridian Bank** | Full transfer to the bank's own platform team and SRE; nothing leaves the building | Bank platform team; vendor supports remotely | SEC/FINRA; no external SaaS; no cloud console | Knowledge must live in the customer's environment, not in the vendor's wiki |
+| **3** | **Corvid** | Vendor-managed; handover to a support lead and one IT admin, not engineers | Support lead; 1 IT administrator | No ops staff; $0.04/request; 24/7 expectations | Handover to a non-engineering audience is a different deliverable |
+| **4** | **St. Aldwyn Health** | Hospital IT team runs it; clinicians need usage guidance | 2 IT staff; physicians and pharmacists as users | Air-gapped; PHI; 24/7 clinical availability | Two audiences, two training tracks, one platform |
+| **5** | **Halden & Rowe** | Firm's IT contact only; no ops staff; ~40 requests/day | 1 IT contact; 30 junior lawyers | Privilege; per-matter isolation; no external API | The smallest viable handover is a checklist, a short runbook, and a diagnostic bundle |
 
 - [ ] Codify deployment playbooks: step-by-step guides per deployment pattern (RAG, agents, fine-tuning, multimodal)
 - [ ] Build reusable infrastructure modules: Terraform, Helm charts, Kubernetes manifests, Docker Compose templates
@@ -2717,6 +2731,471 @@ Publicly reported cases used throughout Pillar E, cited for the decision pattern
 - [ ] Review and improve deployment processes based on cumulative experience across multiple customers
 - [ ] Package customer-specific work into reusable blocks for the shared internal library
 - [ ] Contribute to open-source tools: bug fixes, feature PRs, documentation improvements to vLLM, LangChain, LangGraph, etc.
+
+---
+
+#### F1. Codify deployment playbooks
+
+**Goal.** One executable, repeatable sequence per architecture pattern, so the next deployment is a copy-and-adapt job rather than a rebuild from memory.
+
+**How to do it.**
+
+1. **Write one playbook per architecture pattern, not per customer.** The patterns are the durable objects — document RAG, tool-using agent, fine-tuned model behind an API, multimodal/OCR pipeline. Every customer is a configuration of one of them, and a per-customer playbook is a document with a customer's name on it that will never be reused.
+2. **Give every playbook the same skeleton:** preconditions → prerequisites → deploy steps → verification → smoke test → rollback → known failure modes → escalation. A reader who has used one playbook can use all of them without re-learning the format.
+3. **Make every step executable.** Exact commands, exact file names, exact expected output, in order. "Configure the vector store" is a wish; `helm upgrade --install vectordb --set persistence.size=500Gi --wait` is a step.
+4. **Put verification before go-live, not after it.** A playbook that explains how to deploy but not how to know it worked hands the next engineer an untested system.
+5. **Pin everything the playbook was last proven against:** model version, image digests, chart versions, library versions, and the date. An unpinned playbook is a guess with good typography.
+6. **State the two numbers people forget:** elapsed time and cost, including GPU lead time. Deployments get planned against real deadlines, and "8–12 weeks for the hardware" either changes the plan or breaks it.
+7. **Write the failure section from real incidents** — symptom → cause → fix, harvested from post-mortems. An imagined failure list teaches people to imagine failures.
+8. **Keep a machine-readable twin** of the playbook — a Makefile target, a script, a CI job — so the prose and the automation cannot drift apart. A playbook and a pipeline that disagree are worse than neither.
+9. **Date it and name an owner.** A playbook without an owner becomes history, and history is what people find at 2am.
+
+**Artifacts.** Playbook template; one playbook per architecture pattern; pinned versions and last-proven date; verification and rollback sections in each playbook; script or Makefile mirror; failure catalogue from post-mortems; named owner and review cadence.
+
+**Worked example — Northwind Mutual.** The claims manual re-issues monthly, so the RAG playbook for Northwind carried a variant step the generic one did not: re-index and diff the effective-date clauses against the previously indexed version before the new manual goes live. That step was not part of the pattern — it was born from a mid-month amendment that the system answered confidently and wrongly. It was written back into the shared RAG playbook as an optional "versioned corpus" stage, with a note saying it is mandatory wherever a corpus is re-issued on a schedule. The generic playbook improved because of a customer-specific defect, which is the whole point of maintaining one.
+
+**See also — The Twelve-Factor App** (2011) is the closest published standard for the shape of a deployment playbook: config in the environment, dependency declaration, disposability, and one-off admin scripts run as the same release. A playbook is the operator-facing half of the twelve-factor method, and adopting its vocabulary makes handover conversations shorter.
+
+**Watch out for.** Playbooks written per customer and never reused. Steps with no expected output. Verification relegated to an appendix. Unpinned versions. Failure sections written from imagination. Prose that has drifted from the automation it describes.
+
+**Done when.** Four pattern playbooks exist, each with executable steps, expected outputs, verification before go-live, a rollback procedure, a pinned-versions table, and a real failure catalogue; each has a named owner and a last-proven date; and the machine-readable twin is executed by CI rather than maintained by hand.
+
+---
+
+#### F2. Build reusable infrastructure modules
+
+**Goal.** Infrastructure written once, parameterised by capability, and reused across customers without carrying one customer's constraints into the next.
+
+**How to do it.**
+
+1. **Parameterise by capability, not by customer.** The interface is `rag_index(module, retention_days, encryption_key_ref)`, never `northwind_claims`. Customer-specific values are inputs; customer-specific code is not. The moment a module is named after a customer, it is a fork waiting to happen.
+2. **Split the stable core from the variable edge.** A stable core (GPU node pool, model server deployment, ingress and secret wiring, observability baseline) plus a thin per-customer values layer. Everything that legitimately varies between customers should be expressible in the values layer, and the two layers should be reviewable separately.
+3. **Keep the interface narrow — three or four inputs per module.** A module with fifteen inputs is a script wearing a module's clothes, and nobody can tell whether they set all of them.
+4. **Make every module idempotent and re-runnable.** A second apply must produce an empty plan. Non-idempotent infrastructure cannot be promoted between environments or reconciled after a partial failure.
+5. **Ship modules with the tests that prove them:** a plan test on a fixture, an apply test in a scratch environment, and a destroy test. A module nobody has destroyed is a module nobody trusts, and destroy is where the hard-coded hostnames and bucket names surface.
+6. **Version and publish modules in a registry with semantic versions,** and pin every customer deployment to a specific version. Unpinned modules mean a customer can be broken by a commit that landed after they deployed.
+7. **Never bake in data, hostnames, or credentials.** Secrets are always references into a secret store, resolved at apply time. A module with a literal key in it is an incident waiting for a repository audit.
+8. **Ship a single-machine path next to the cluster path.** Not every customer has Kubernetes, and a maintained Docker Compose template is often the only deployment a small customer ever runs. Force-fitting a two-person IT team into a cluster module is how templates get abandoned.
+9. **Provide an escape hatch, and document it.** Modules must accept raw values for the fraction of cases they do not fit, or every engagement will fork the module instead.
+
+**Artifacts.** Module repository; module index with versions; typed values schema per module; plan/apply/destroy test harness; Docker Compose templates for single-node and workstation targets; internal module registry and pinning policy; secret-reference convention; escape-hatch documentation.
+
+**Worked example — Meridian Bank.** Nothing could leave the building, which broke the obvious publishing route: the module registry could not be a public Terraform registry, and the CI that validated modules could not reach a hosted backend. The modules were vendored into the bank's own source tree, validated by an in-cluster CI runner against a disposable namespace, and the destroy test became the only automated check that no external endpoint had been introduced — because the bank had a standing rule that any configuration resolving to a public IP is a finding. That rule, written as a test rather than a review comment, became one of the most reused pieces of the module library.
+
+**Worked example — St. Aldwyn Health.** The air gap ruled out both the registry and the image pull. The composition shipped as an offline bundle: Docker Compose files with image digests pinned, a load script for a pre-staged tarball set, and a verification script that checked every digest against a manifest before the first start. The rule the module library learned from it — every image reference resolves to a digest, never a floating tag, with a CI check that fails on a tag — is now applied to every customer's deployment, because the environment that forces the rule is the environment that catches everyone else's drift.
+
+**See also — Terraform module structure and the "official module" conventions** (HashiCorp, 2020–onward) and **Helm chart best practice** give a shared shape for parameters, versions, and chart layout; **Kustomize overlays** are the usual answer to the same need when the customer already owns the base.
+
+**Watch out for.** Modules named after customers. A fifteen-parameter interface. Modules that are not idempotent. Secrets hard-coded into values. A registry only half the deployments actually use. Destroy never tested. Pinned versions forgotten at the customer site.
+
+**Done when.** Every module is parameterised by capability, has an interface of at most four inputs, passes plan/apply/destroy tests in CI, is published at a version, and is pinned by every deployment that uses it; a single-machine path exists and is maintained; and no module contains a literal credential or hostname.
+
+---
+
+#### F3. Create reusable application components
+
+**Goal.** Application-level building blocks — ingestion and retrieval pipeline, agent template, evaluation harness, monitoring dashboards — that carry proven behaviour from one engagement to the next instead of being rewritten per customer.
+
+**How to do it.**
+
+1. **Componentise what actually repeats.** Ingestion, chunking, embedding, retrieval, reranking, generation; the agent loop with tool registry and budget; the eval harness; the dashboards. These are the parts that were rebuilt by hand in every engagement and that carry the hard-won fixes.
+2. **Publish a contract with every component:** inputs, outputs, configuration surface, failure modes, and — explicitly — what it does not do. The last clause is what stops a component being used for something it was never tested on.
+3. **Make behaviour configurable instead of forkable.** If two customers need different behaviour, that should be one config change in one component, not a copy-paste that diverges silently. Track how often a component has been forked; a component that is forked is a component with a missing setting.
+4. **Version components independently but pin them together in the application,** and record the combination in a release record. "Which versions of what shipped" is the first question of every incident review.
+5. **Move the engagement-specific fixes back into the component.** The chunker that survives the broken PDF export, the retriever that filters superseded clauses by effective date, the tool call that needs an idempotency key — these belong in the shared library the moment they are understood.
+6. **Make the evaluation harness a first-class component** with a fixed interface: point it at a golden set, run it against a candidate, and get a comparable report. Handing over results instead of the harness hands over a snapshot of the past.
+7. **Keep components deployment-agnostic.** The same component should run under Docker, Compose, Kubernetes, or a laptop without modification, because the hosting model differs per customer and the component should not.
+8. **Ship a reference wiring per component** — the smallest complete, running configuration that works — so integration time is copy-and-change rather than interpretation.
+9. **Instrument reuse,** and treat a component nobody uses as a liability to be retired rather than maintained forever.
+
+**Artifacts.** Component catalogue with versions; interface contracts including non-goals; pinning and release-record conventions; reference wiring per component; component test suite; reusable evaluation-harness component; dashboards-as-code definitions; reuse and fork telemetry.
+
+**Worked example — Halden & Rowe.** A 40-requests-a-day law firm with no ops staff was the least glamorous candidate for reusable components and the best test of them. The two components that earned their place were the smallest: a per-matter namespace isolation component that made workspace separation a configuration value rather than a bespoke index build, and a single-process CPU retrieval path that removed the need for a vector database entirely. The second started as an accommodation for Halden and was later adopted at two other customers, because the components are parameterised by capacity rather than by customer. The lesson the library recorded was that a component's value is not its sophistication but how many engagements can adopt it unchanged.
+
+**See also — open-source evaluation harnesses** (EleutherAI's `lm-evaluation-harness`, Hugging Face `evaluate`) establish the contract a reusable eval component must satisfy — a named set of tasks, a documented metric, and a command that produces comparable output — which is exactly the interface the shared harness component needs to expose.
+
+**Watch out for.** Components that fork per customer. Contracts that omit the non-goals. Components coupled to one hosting model. Fixes left in engagement repositories. Handover of eval results instead of the harness. Reference wirings that stopped working.
+
+**Done when.** A component catalogue exists with versions, contracts, and non-goals; every component ships a tested reference wiring and a test suite; the evaluation harness is a reusable component the customer can run in their own CI; and reuse/fork telemetry shows which components are adopted unchanged.
+
+---
+
+#### F4. Develop deployment templates for verticals
+
+**Goal.** A proven reference architecture per vertical, so a new engagement starts from a design that has already been implemented, evaluated, and explained to a customer — not from a blank page.
+
+**How to do it.**
+
+1. **Start from the vertical's reality, not its org chart.** What data exists, what questions get asked, what is regulated, who is accountable when the answer is wrong, and what a wrong answer costs. A vertical is defined by its constraints, not by its industry name.
+2. **Specify three things per template:** the topology, the data flow with its trust boundaries, and the evaluation harness. The harness is what separates a template from a diagram — it is the part that makes the design testable rather than merely plausible.
+3. **Ship the template as a bundle,** not a document: infrastructure code, application scaffold, prompt library, golden-set skeleton, dashboard definitions, and a runbook. A template that must be assembled by hand is a reference implementation, and those are never finished.
+4. **Mark the maturity honestly:** draft, proven (used in one live engagement), reference (used across several), deprecated. A customer reading a template deserves to know how many times it has been run, and an honest "draft" label saves both sides a difficult engagement.
+5. **Keep the variations visible.** A reference architecture that hides every customer's constraint gets misapplied. Where a template makes an assumption, state it as an assumption and its consequence if wrong.
+6. **Write the "when not to use this template" section,** including the volumes, residency, or latency budget at which it stops applying. This is the most-read section in practice, because it is the one that stops a wrong fit.
+7. **Write the deviation log** — every departure from the template in a real engagement, with the reason. It is the mechanism that turns several engagements into one mature template.
+8. **Have the template reviewed by someone who will have to deploy it,** not only by the person who wrote it.
+
+**Artifacts.** Vertical template bundle (IaC, scaffold, prompt library, golden-set skeleton, dashboards, runbook); topology and data-flow diagrams with trust boundaries; evaluation skeleton per template; maturity labels; applicability and non-applicability notes; deviation log; review record from a deploying engineer.
+
+**Worked example — Halden & Rowe.** The legal template's defining constraint was that privilege is not a feature you can retrofit and that matters must never share an index. The template therefore made per-matter isolation structural — a namespace per matter, with the retrieval layer refusing to cross namespace boundaries — rather than a filter applied at query time, because a filter can be misconfigured by a tired operator and a namespace cannot. It also had to run on a single CPU workstation with no external API, so the reference design was explicitly low-throughput with a stated capacity ceiling of roughly forty requests a day, and it carried an "applies up to about 100 requests a day, then re-derive the design" note. When a second legal firm came in the following quarter with a similar shape, the template was reused with two changes and one logged deviation — which is how the template earned its "reference" label rather than "proven".
+
+**See also — the AWS Well-Architected Framework's Generative AI Lens** (2023–24) is the closest published review structure for a reference architecture: it is organised as checks against a design, which is exactly how a template should be consumed and reviewed.
+
+**Watch out for.** Templates that are only diagrams. Maturity labels that flatter. Assumptions buried in the configuration. No "when not to use" section. A deviation log nobody maintains. Templates reviewed only by their author.
+
+**Done when.** Each vertical template ships as a runnable bundle with topology, trust boundaries, and an evaluation skeleton; maturity is labelled honestly; the non-applicability conditions and the deviation log are published; and an engineer who did not write it has deployed it.
+
+---
+
+#### F5. Author and maintain architecture decision records
+
+**Goal.** A durable, checkable record of why the system is the way it is, written so that the person who inherits it in two years can audit the reasoning rather than guess at it.
+
+**How to do it.**
+
+1. **Record decisions, not design.** An ADR captures a decision with its context and its consequences; the design document describes the current state and is superseded the moment anything changes.
+2. **Use one decision per record, in a fixed template:** status, date, context, decision, consequences (both good and bad), alternatives considered, and the decider. A single decision per document keeps it small enough to be read and written.
+3. **Write it at the moment of the decision,** ideally before the irreversible work starts. An ADR written three weeks later records a justification, not a reasoning.
+4. **Capture the alternatives with the reason they were rejected,** and the condition that would reverse the choice. "We chose X over Y because of Z; if Z changes, revisit" is the sentence that makes the record useful years later.
+5. **Record the constraints that forced the decision,** because constraints move. A decision that only makes sense under the constraints of its day needs those constraints written down, or it looks arbitrary to the next reader.
+6. **Mark status honestly:** proposed, accepted, superseded by ADR-NNN, deprecated. Superseding records link in both directions so the history stays legible.
+7. **Keep ADRs in version control next to the code they describe.** They are code artefacts with a review process, not wiki pages, and a reviewed decision is a better decision.
+8. **Name a decider and a date.** A decision with no owner is a discussion.
+9. **Review the set periodically** — prune the ones that never mattered, index the ones that still bind. Two hundred ADRs is a haystack, not a record.
+
+**Artifacts.** ADR template; the decision records themselves; an index of active decisions with status; supersession links both ways; review cadence; mapping from decisions to the artefacts they produced.
+
+**Worked example — Meridian Bank.** A regulatory constraint made several decisions permanent and non-negotiable — no external API, no cloud console, data residency — and the ADRs became the audit-facing artefact: the compliance pack cited ADR numbers rather than re-explaining the reasoning to the examiners. One ADR recorded the decision to run the entire stack inside the bank's environment even though it cost materially more engineering; it recorded the alternative (managed services outside the perimeter) and the condition that would reverse it (a change in the bank's policy on external processing). Two years later the reasoning was still checkable even though the people were not, and the "if Z changes" line was what made the record defensible rather than merely descriptive.
+
+**See also — Michael Nygard's "Documenting Architecture Decisions"** (2011) established the ADR format and, more importantly, the discipline of recording a decision together with its context and consequences; MADR and the "ADR as code" conventions refine the layout for repositories.
+
+**Watch out for.** ADRs written as design notes. Multiple decisions per record. Records written after the fact and justifying rather than explaining. Missing the rejected alternatives. No supersession links. Decisions with no named decider. An index that is never maintained.
+
+**Done when.** Every consequential decision has a record with status, context, decision, consequences, rejected alternatives, and a reversal condition; the set is indexed and reviewed on a cadence; superseded records link forward and back; and the compliance pack can cite decisions rather than restate them.
+
+---
+
+#### F6. Create customer-facing documentation
+
+**Goal.** Documentation the recipient can act on without the person who wrote it in the room — organised around the tasks they will actually perform.
+
+**How to do it.**
+
+1. **Write for the reader with the least context:** the operator, the new engineer, the lawyer who received the system on Monday. Assume no shared vocabulary and no memory of the design discussion.
+2. **Organise by task, not by architecture.** How do I deploy, how do I change a prompt, how do I read a dashboard, how do I roll back, what do I do when an answer looks wrong. Task-first is what makes documentation usable under pressure.
+3. **Write the troubleshooting runbook symptom-first:** "the system returns the old policy" → what to check → how to confirm → how to fix → when to escalate. Readers arrive with a symptom, so the document must start there.
+4. **Publish a short "what this system does not do" page.** It is the highest-value page in the set for reducing support load, and the one most often skipped.
+5. **Publish a configuration reference with every knob,** its default, its safe range, and what breaks when it is wrong — not just the schema.
+6. **Version the documentation with the software** and state which release it describes. Documentation that lags the deployment is worse than none, because it is trusted.
+7. **Use examples in the reader's data shapes and domain vocabulary,** not `foo` and `bar`. Generic examples teach the reader to translate before they can copy.
+8. **Put an owner and a review date on every page,** and archive pages for retired versions rather than deleting them — the question "what did the policy say when this answer was given" is a real one.
+9. **Test the documentation.** Give it to someone who did not build the system and ask them to complete a task without asking you a question.
+
+**Artifacts.** Task-based documentation set; symptom-first troubleshooting runbook; configuration reference with safe ranges; "what this does not do" page; release notes tied to versions; example set in domain vocabulary; ownership and review metadata; archive of superseded versions; a documentation walkthrough test.
+
+**Worked example — Halden & Rowe.** The firm's 30 junior lawyers were the primary readers, not the IT contact, and they had no engineering background. The documentation was written as a per-matter guide with five sections — what you can ask, what you cannot ask, how to spot a weak answer, how to correct it, and who to contact — plus one page for the single IT contact covering restart, health check, and collecting the diagnostic bundle. The documentation that mattered most was aimed at the wrong audience by default in most engagements, the operators, and here the operators were thirty people who needed confidence rather than two people who needed commands.
+
+**See also — Diátaxis** (2023) distinguishes tutorial, how-to guide, reference, and explanation and insists they are different genres that must not be blended; the failure mode it names, a tutorial that turns into a reference, is the most common way deployment documentation becomes unusable.
+
+**Watch out for.** Architecture-shaped documentation. Symptom-first runbooks written as feature lists. Configuration references that only list keys. Unversioned docs. Examples in the wrong vocabulary. Documentation written and never read by the target audience. Deleted pages with no archive.
+
+**Done when.** A task-indexed documentation set exists with a symptom-first troubleshooting runbook, a configuration reference, and a "does not do" page; every page names an owner, a review date, and the release it describes; a target-audience reader completed a real task unaided; and superseded versions are archived.
+
+---
+
+#### F7. Develop training materials
+
+**Goal.** Materials that let the customer operate and extend the system in their own environment, under their own constraints, at their own pace.
+
+**How to do it.**
+
+1. **Start from the job the learner has, not from the technology.** "How do I change the summarisation prompt when the service changes?" comes before "how prompt templates work".
+2. **Write for the environment the learner is in:** air-gapped, on-prem, no SaaS, or a laptop. Training material that assumes internet access and a cloud console teaches nothing in a hospital.
+3. **Provide the same material in two forms** — a self-paced document and a live session — because the audiences differ. The self-paced copy is read at 11pm during an incident; the live session is where questions get asked.
+4. **Include hands-on exercises on the customer's own configuration,** including a deliberately broken build. Diagnosing a broken thing is the only way to prove knowledge transferred.
+5. **Teach the failure path first:** monitoring, alerting, reading a trace, the rollback, the escalation path. The happy path is usually documented in the product; the failure path is what the customer will need at 3am.
+6. **State the authority boundaries explicitly** — what the team may change, what must be escalated, what is out of scope for them. Ambiguous authority produces either paralysis or unauthorised change.
+7. **Version the materials with the system** and record which release they were written against.
+8. **Reuse and adapt rather than write fresh:** base modules organised by topic (operating, tuning, debugging, extending) that any customer can consume, with per-customer labs layered on top.
+9. **Include an assessment** — a checklist of demonstrated tasks — so completion is evidence rather than attendance.
+
+**Artifacts.** Curriculum by topic; self-paced and live-session versions; labs built on customer configuration; broken-build exercise; failure-path module; authority and escalation boundaries; version stamp; reusable base modules; completion checklist.
+
+**Worked example — St. Aldwyn Health.** Two audiences on one platform: two IT staff who run it, and physicians and pharmacists who use it. The IT track was a day of system operation — index refresh, batch window discipline, GPU capacity dates, and the offline update procedure the air gap forces, which nobody else's materials cover. The clinician track was deliberately short and non-technical: what the summary can and cannot do, that it is a draft for review, and the escalation path. Keeping the two tracks in separate documents was the decision that made both teachable; a single combined manual served neither audience.
+
+**See also — Anthropic's "Building Effective Agents"** (2024) and Google's "Rules of Machine Learning" (2019) are the two short public references that carry more transferable teaching value than most internal curricula, and both are usable as customer-facing reading with light editing.
+
+**Watch out for.** Material organised around technologies instead of jobs. One combined manual for an IT team and end users. Slides with no exercises. Happy-path-only content. Unstated authority boundaries. Materials that were written once and never re-versioned. Attendance counted as training.
+
+**Done when.** A topic-based curriculum exists in self-paced and live forms with labs on the customer's own configuration; the failure path and a broken-build exercise are included; authority and escalation boundaries are written down; materials are versioned against a release; and completion is evidenced by a demonstrated-task checklist.
+
+---
+
+#### F8. Deliver hands-on training
+
+**Goal.** Prove the receiving team can operate the system unaided, by having them actually do it rather than watch it.
+
+**How to do it.**
+
+1. **Make it hands-on by default.** A slide deck transfers information; a session in which the learner changes something and observes the effect transfers capability. The receiving team should deploy a change, not watch one.
+2. **Train the failure path first:** give them a deliberately broken build and have them diagnose it. Diagnosis is the operation that actually happens at 2am.
+3. **Have them reproduce a full deployment of a small change** — a prompt change is ideal — from a clean checkout, on their own machine or cluster, without the builder's screen.
+4. **Have them interpret a real dashboard and a real trace,** and say what they would do about what they saw. Reading a trace is the core skill of operating an LLM system and it is almost never taught.
+5. **Have them execute a rollback under observation.** A rollback drill is the highest-value hour of any handover.
+6. **Have them run the eval suite** and interpret the result against thresholds they own.
+7. **Use the customer's real content and configuration wherever the constraint allows it.** Sanitised or toy content teaches the wrong reflexes.
+8. **Assess by demonstration, not by attendance.** A checklist the receiving team completes unassisted — deploy a prompt change, run the eval suite, read a dashboard, execute a rollback — is the certificate.
+9. **Shadow before you hand over:** the customer team watches live alerts for a week and then takes them. Keep the builder's access open but audited for the first month, then revoke it — revoking early breaks support, revoking late creates an audit finding.
+
+**Artifacts.** Training session plan with hands-on tasks; broken-build exercise; deployment reproduction task; dashboard and trace reading exercise; rollback drill record; eval suite exercise; demonstration checklist with sign-off; shadow schedule; published escalation path with response times.
+
+**Worked example — Corvid.** There were no engineers to train — the receiving party was a support lead and one IT administrator, and the promise to the customer was a vendor-managed service with a 24/7 expectation and a $0.04 per request cost ceiling. "Training" therefore could not mean teaching system administration, and pretending otherwise would have wasted the day. It was reframed as two sessions: one for the support lead on what the system does, what it refuses to do, how to read the daily quality and cost report, and how to recognise a degrading system before the customer does; one for the IT administrator on the four commands that matter — start, health check, restart, and collect the diagnostic bundle. The acceptance test was that the IT administrator performed a restart and produced a usable diagnostic bundle without instruction, from a printed card. Nothing about Kubernetes was taught, because nothing about Kubernetes was theirs to operate.
+
+**See also — the certification pattern in the handover phase** (hands-on demonstration rather than attendance) is the same discipline as the pair-and-swap review practice in engineering teams; the customer-facing version simply requires the demonstration to be evidenced and signed.
+
+**Watch out for.** Slide decks dressed up as training. Healthy systems that teach nothing. Assessment by attendance. Training the operator when the operator is the vendor. Shadowing that never ends. Access revoked before the team is ready.
+
+**Done when.** The receiving team has reproduced a deployment change unaided, diagnosed a deliberately broken build, read a dashboard and a trace and stated an action, run the eval suite against owned thresholds, and executed a rollback; the demonstration checklist is signed; and the escalation path is published with response times.
+
+---
+
+#### F9. Build the internal knowledge base
+
+**Goal.** A searchable internal store of deployment patterns, lessons learned, pitfalls, and tool comparisons, so the next engagement starts from the last one.
+
+**How to do it.**
+
+1. **Index by decision and situation, not by project.** Entries are titled as conditions ("chunking strategy for scanned PDFs with tables", "on-prem deployment with no external services"), not by engagement ("Northwind notes"). Engagement-titled notes are invisible to the next engineer.
+2. **One entry, one lesson, with the context that makes it transferable:** the situation, what was tried, what happened, and what to do instead. An entry without the situation cannot be applied to anything.
+3. **Record the failure cases.** "What we tried and it did not work" is the highest-value content in such a library and the least likely to be written.
+4. **Keep tool comparisons dated and versioned.** A comparison without versions is a snapshot that will later be cited as current fact.
+5. **Make it searchable by constraint, not by technology name.** Engineers arrive with a constraint — air-gapped, no external API, under 50 requests a day, no ops staff — and a library indexed only by tool name is not findable by the people who need it.
+6. **Write the entry at the point of learning** — within days of the engagement, while the details are present — and schedule a six-month review, because some lessons expire.
+7. **Link the entry to the artefacts it produced:** the ADR, the module, the playbook, the runbook. An entry with no links is advice, and advice is not reusable.
+8. **Anonymise rigorously.** A knowledge base is a cross-client data lake and inherits the strictest confidentiality of anything in it; names, data, and identifying details must be stripped or explicitly consented.
+9. **Maintain it** — retire superseded entries and mark the ones that turned out to be wrong. An unmaintained library is worse than none, because it is trusted.
+
+**Artifacts.** Knowledge base structure with tags by constraint; entry template (situation, tried, outcome, recommendation); failure-case log; dated tool comparison tables; entry-to-artefact links; review and expiry dates; anonymisation policy and pre-publication check.
+
+**Worked example — Northwind Mutual.** The lesson that entered the library was about corpus versioning rather than any model or framework choice: the manual re-issued monthly, an in-month amendment was indexed stale, and the system answered confidently with a superseded notification deadline. Written as "versioned corpora need an effective-date check before serving", with the trigger being "the corpus is re-issued on a schedule or amended out of band", it was findable by the St. Aldwyn team weeks later, whose summaries were built on a guideline document updated out of band by a committee. Two engagements, one lesson, no customer names. Under the old scheme that lesson would have lived in a notebook in a departing engineer's laptop.
+
+**See also — the pattern-library approach in the CNCF Cloud Native AI whitepaper** (2024–25) and the "lessons learned" practice in the AWS Well-Architected Framework, which capture decisions and their trade-offs so the next team does not repeat the experiment.
+
+**Watch out for.** Entries titled by engagement. Lessons recorded without the situation that makes them transferable. Only successes. Undated tool comparisons. Search only by technology name. Customer data left in the text. Entries never revisited.
+
+**Done when.** The library is searchable by constraint as well as by title; every entry states the situation, what was tried, the outcome, and the recommendation, and links to the artefacts it produced; failure cases are recorded as first-class entries; tool comparisons are dated; and an anonymisation check runs before publication.
+
+---
+
+#### F10. Create evaluation templates
+
+**Goal.** Templates that let any team build a golden set and an eval harness, with the standard failure modes of eval design already handled for them.
+
+**How to do it.**
+
+1. **Template the golden-set creation process, not just the harness.** The hard part is the set: a stratified sample of real queries, labelled by a human, split into a development set and a held-out set that is never edited.
+2. **Stratify by the dimensions that matter to the customer** — query type, difficulty, document type, risk level — so the report shows where the system is weak instead of an average that hides it.
+3. **Label more than correctness.** Relevance, faithfulness, completeness, tone, refusal correctness, and citation correctness are different judgements, and the rubric should separate them; a single blended score hides opposite failures.
+4. **Keep the held-out set quarantined and human-authored.** A set that models help author drifts toward what those models do well.
+5. **Ship thresholds with the template, but require the customer to change them.** The value of a threshold template is the method, not the number.
+6. **Ship the red-teaming checklist alongside the eval template.** The attack categories, probing prompts, and pass criteria belong in the same package, because quality and safety are evaluated against the same set.
+7. **Make the harness runnable in CI with one command and a machine-readable report,** so evaluation is a gate rather than a ceremony.
+8. **Record the harness version alongside the results.** A result without the harness version can be neither reproduced nor compared.
+9. **Feed every incident back as a permanent regression case.** The failure catalogue is the cheapest, most valuable eval data there is.
+
+**Artifacts.** Golden set creation guide with stratification template; rubric and labelling guide with worked examples; harness template with CI command and report schema; threshold template with a required customer override; red-teaming checklist and attack set; incident-to-regression-case feed; harness version stamping.
+
+**Worked example — St. Aldwyn Health.** Clinical summaries carry the strictest correctness requirements of any case in the set: a wrong line in a discharge summary can change a dosing decision. The template built for this engagement forced stratification to include "high-risk clinical category" as a dimension, so the eval report never presented a single accuracy number that could hide a failing drug-interaction slice. The rubric separated faithfulness — is every statement in the summary supported by the record — from completeness — is any clinically salient finding missing — because the two fail in opposite directions and a combined score hid both. The golden set was authored and labelled by clinicians rather than engineers, and the held-out half was never edited after a failure, which meant a failing case could only be fixed by improving the system.
+
+**See also — the NIST AI RMF measure function** (2023) and its Generative AI Profile (2024) for measurement structure and evidence expectations, and **HELM** for reporting a whole trade-off profile rather than a single headline number.
+
+**Watch out for.** Templates that only cover the harness and not the set. Unstratified samples. Blended rubric scores. Editing held-out cases. Shipped thresholds nobody changes. Red-teaming bolted on later. Results without a harness version.
+
+**Done when.** A golden-set creation guide with a stratification template and rubric exists; the harness runs in CI with one command and emits a versioned report; red-teaming checklists ship with the eval package; the customer has set their own thresholds; and every production incident has a corresponding regression case.
+
+---
+
+#### F11. Document integration patterns
+
+**Goal.** Reusable integration shapes — MCP servers, connectors, ingestion recipes — so customer integration is assembly rather than invention.
+
+**How to do it.**
+
+1. **Publish patterns, not one-off adapters.** A pattern is "read-only connector to a document management system with incremental sync and per-source metadata", not "the Northwind connector".
+2. **Define the connector contract:** authentication method, pagination, rate limits, error semantics, incremental sync strategy, and the metadata propagated into the index. A connector without an error contract is a source of silent data loss.
+3. **Standardise the ingestion recipe** — fetch → parse → normalise → chunk → embed → index → verify — with a verification step that reports counts and a content sample at each stage. The verification step is the pattern's most important part.
+4. **Publish MCP server templates with the security posture stated:** which tools are exposed, what each tool can reach, how credentials are scoped, and how calls are audited. An MCP server is an API surface and must be reviewed like one.
+5. **Make tenancy explicit in the pattern.** Whether isolation is per-tenant, per-matter, or per-namespace must be a stated property of the pattern, because getting it wrong is a confidentiality failure rather than a bug.
+6. **Write the failure modes:** partial sync, deleted source documents, schema drift in the source system, rate limits, and duplicates — with the detection and the response for each.
+7. **Version connectors against the source system** and record the tested version. Source systems change without notice and will break a connector silently.
+8. **Keep the connector minimal and the customisation point explicit,** so it stays maintainable across dozens of customers.
+
+**Artifacts.** Connector contract template; ingestion recipe with per-stage verification; MCP server template with a declared tool surface and credential scoping; tenancy and isolation properties per pattern; failure-mode catalogue; source-version compatibility table; rate-limit and retry defaults.
+
+**Worked example — Northwind Mutual.** Claims documents arrived from a document management system whose export had changed twice in three years, and each change silently dropped a field the pipeline assumed — a document-type field the retrieval filters depended on. The connector pattern that came out of it made the ingestion stage assert on expected metadata rather than proceed when a field was missing, so schema drift became a failed verification instead of an empty index nobody noticed until a user asked for the wrong document. The same pattern, with the field list parameterised, was then adopted for Meridian Bank's KYC file ingestion, where the verification report was compared nightly against the bank's own control totals.
+
+**See also — the Model Context Protocol specification** (2024–25) for the tool-and-resource contract that server templates should honour, including capability negotiation and the boundary between client and server control.
+
+**Watch out for.** Connectors named after customers. No error contract. Ingestion with no verification step. MCP servers exposed without a tool audit. Isolation implied rather than stated. Silent schema drift. Unversioned source assumptions.
+
+**Done when.** Every published connector has a contract covering auth, pagination, rate limits, errors, sync strategy, and propagated metadata; the ingestion recipe verifies counts and content at each stage; MCP templates declare their tool surface and credential scope; isolation properties are stated per pattern; and each connector records the source versions it was tested against.
+
+---
+
+#### F12. Produce reusable prompt libraries
+
+**Goal.** A versioned library of system prompts, few-shot examples, and reasoning templates that teams can start from without inventing behaviour from scratch.
+
+**How to do it.**
+
+1. **Store prompts as code, in the repository,** with version history and review. A prompt living in a wiki or a console is unversioned behaviour with no rollback.
+2. **Organise by use case and domain, with metadata:** purpose, owner, target model, known limitations, and the eval result that justified the prompt. A prompt without an eval result is an untested claim.
+3. **Ship the prompt with its few-shot examples and its rubric.** A prompt separated from its examples and its evaluation cannot be reproduced.
+4. **Parameterise inputs** — user role, matter type, tenant, tone — rather than cloning per customer. Where genuine divergence is needed, fork deliberately and mark it.
+5. **Version prompts with the system and record the pairing of prompt version with model version.** Behaviour depends on both, and a prompt tested on a retired model is not a tested prompt.
+6. **Keep a library of failures:** prompts that caused over-refusal, hallucination, leakage, or excessive latency, with the reason. Negative knowledge prevents repetition.
+7. **Provide patterns, not just literals** — the structure of a good extraction prompt, a good refusal prompt, a good router prompt — with the reasoning, so the customer can adapt rather than copy.
+8. **Test every prompt against the eval template before publishing,** and re-test when the model version changes.
+
+**Artifacts.** Prompt repository with review history; library index with metadata; few-shot example sets; scoring rubrics; parameterisation conventions; divergence and fork policy; failure catalogue; per-prompt eval results with the model version they were measured against.
+
+**Worked example — Halden & Rowe.** Thirty junior lawyers sharing a prompt library is a privilege risk and a consistency problem at once: if each lawyer edits the prompt, behaviour depends on who asked. The library therefore stored one prompt per task with the variables (matter type, jurisdiction, role of the requesting party) as parameters, and the library's change log became part of the firm's audit trail, because a lawyer needed to be able to say which version of the instructions produced a given draft. The most valuable addition to the shared library was the refusal pattern for out-of-scope requests, since a junior lawyer asking something the system should decline is the highest-volume failure in a legal deployment and had never been written down in reusable form.
+
+**See also — Anthropic's "Building Effective Agents"** (2024) for the pattern catalogue a prompt library should organise around, and the provider prompt-engineering guidance for the mechanics of versioned, tested prompt behaviour.
+
+**Watch out for.** Prompts in wikis. Prompt and example files separated. No eval result attached. Clones per customer. Prompt version recorded without model version. Only successful prompts published. Publishing without re-testing against the current model.
+
+**Done when.** Prompts live in version control with review history; each library entry carries purpose, owner, target model, known limitations, and its eval result; examples and rubric ship with the prompt; divergences are deliberate and marked; and the failure catalogue is maintained and consulted before new prompts are written.
+
+---
+
+#### F13. Share deployment patterns with the broader FDE team
+
+**Goal.** Patterns move between engineers instead of staying with whoever happened to build them.
+
+**How to do it.**
+
+1. **Run a regular, scheduled session with a fixed format:** one pattern, one worked example, one thing that went wrong, one open question. A template makes sessions produce reusable content; a free-form show-and-tell produces anecdotes.
+2. **Rotate the presenter and require the presenter to teach rather than show.** The person who can explain the pattern is the person who can also write it down.
+3. **Publish the session artefacts afterwards** — the pattern, the diagram, the failure — so people who were absent can use them and the session stays searchable months later.
+4. **Feed a single pattern library,** rather than maintaining a separate pile of session notes that drifts from the library.
+5. **Cross-link patterns to the engagements that produced them,** with customers anonymised, so a reviewer can check the claim.
+6. **Include the counter-cases** — patterns that did not survive a second engagement, with the reason. A library of only successes teaches overfitting.
+7. **Maintain case studies of anonymised engagements for onboarding,** because the shape of a real engagement teaches more than a feature tour.
+8. **Keep the sessions short, recurring, and attended by people who will not deploy that specific pattern,** since the value is transfer rather than specialisation.
+
+**Artifacts.** Pattern-sharing schedule and session template; published pattern library; session notes as reusable entries; anonymised case studies for onboarding; counter-case log; presenter rotation; attendance record.
+
+**Worked example — Halden & Rowe.** The reusable idea that came out of the engagement was the single-host CPU deployment shape, and the reason it was shared at all was that the engineer who built it presented it in the pattern session with the two constraints that made it work — no external API, no ops staff — stated up front, because those constraints are what generalises a pattern. A second engineer then applied it to a non-legal customer with similar constraints, which validated the pattern and, more usefully, showed that the template's capacity ceiling needed to be stated. The team rule that came out of it: a pattern presented without its constraints is an anecdote; a pattern presented with its constraints and its counter-case is reusable.
+
+**See also — the "Rules of Machine Learning" practice of writing down what did not work** and the case-study tradition in professional engineering, both of which treat the counter-case as the valuable half of the record.
+
+**Watch out for.** Sporadic sessions with no template. Only the author's own projects on the agenda. Session notes that never reach the library. A library of successes only. Slides that nobody can reuse.
+
+**Done when.** A recurring session runs on a fixed template and publishes its artefacts into the shared pattern library; each pattern names its source engagement and its constraints; counter-cases are logged; and onboarding case studies exist for each vertical.
+
+---
+
+#### F14. Review and improve deployment processes
+
+**Goal.** A periodic, evidence-based look at how deployments actually go, and a concrete change to the process when they do not.
+
+**How to do it.**
+
+1. **Review on a fixed cadence against a fixed dataset:** every deployment in the period, with the same fields — time to first working deployment, number of manual steps, incidents in stabilisation, defects that reached production, hours of unplanned support, and cost against estimate.
+2. **Compare against the previous period,** not against an ideal. Trends expose the habits that produce the numbers.
+3. **Look for the recurring steps.** The manual step present in four of five deployments is the next module; the manual step present in every deployment that eats an hour is the one worth automating first.
+4. **Count the "first time" cases separately from the "known" cases.** Most deployment time is spent rediscovering a solved problem, which is exactly what playbooks and module libraries remove.
+5. **Feed the review into the backlog with owners and dates,** or it produces opinions rather than improvements.
+6. **Include near-misses and customer feedback, not only incidents.** The absence of incidents is not the absence of problems.
+7. **Publish the review, including what was tried and rejected,** so the next review starts from the last one's conclusions instead of repeating them.
+8. **Separate process problems from skill problems.** A repeated mistake by a competent engineer is a missing guardrail, not a training issue, and the two need different remedies.
+
+**Artifacts.** Quarterly review template and dataset; trend metrics per period; recurring-step analysis; automation candidate list; improvement backlog with owners and dates; published review notes; near-miss register; process-versus-skill classification of findings.
+
+**Worked example — Corvid.** Twelve thousand tickets a day with eight-fold peaks and a cost ceiling of $0.04 per request makes deployment process the only lever on unit economics. The quarterly review measured the same fields across every deployment and found the pattern that mattered: deployments were not slow, they were unreliable in the last ten percent. The recurring manual step was always the same one — the final cost validation before traffic was opened — performed by hand with a spreadsheet, and it had been skipped twice under time pressure, which is why two deployments exceeded the cost ceiling and had to be rolled back mid-ramp. The fix was not a reminder in the checklist but a cost-projection gate in the pipeline that blocks promotion when the projection exceeds the ceiling. That single change came straight out of the review, and it is now a standard gate in every deployment playbook.
+
+**See also — the error-budget discipline of the Google SRE book** (2016) applied to deployment process rather than to service reliability, and DORA's research on delivery performance, which treat process metrics as trends to improve rather than targets to hit.
+
+**Watch out for.** Reviews with no data. Comparing against an ideal instead of the last period. Findings that never reach a backlog. Reviews that stop at "we should be more careful". Confusing a missing guardrail with a training gap.
+
+**Done when.** A quarterly review runs against a fixed dataset and publishes trends; the recurring-step analysis names the next automation candidate; every finding becomes a backlog item with an owner and a date; near-misses are recorded; and the previous review's rejected options are not re-proposed.
+
+---
+
+#### F15. Package customer-specific work into reusable blocks
+
+**Goal.** Every engagement leaves the library better than it found it, with the generic part extracted and the customer's specifics left behind.
+
+**How to do it.**
+
+1. **At the end of each engagement, do an explicit extraction pass** over the diff: what was written that a second engagement with a similar constraint would need? That set is the reusable candidate list.
+2. **Generalise by removing the customer specifics** — names, hostnames, thresholds tuned to one dataset, data shapes — and express them as parameters. If it cannot be parameterised, it is not reusable yet.
+3. **Separate the reusable block from the customer configuration.** The block is the mechanism; the configuration is the values. Publishing a customer's values inside a shared block leaks context and prevents reuse.
+4. **Prove reuse before publishing.** The strongest evidence is a second engagement that used the block unmodified, or with one documented deviation.
+5. **Strip what cannot be removed** — credentials, data samples, internal hostnames — and confirm the removal with an automated scan before publication.
+6. **Version and release the block through the same path as any other code:** review, tests, changelog, registry.
+7. **Record provenance for every block:** which engagement produced it, what it was extracted from, and what is known to be untested in it. Provenance is what makes a library trusted rather than a pile of snippets.
+8. **Budget the time.** Extraction is real work and it does not happen when the engagement ends on a deadline. Put it in the engagement plan with a name against it.
+
+**Artifacts.** Extraction-pass checklist per engagement; reusable block catalogue with provenance; parameterisation review record; rules separating blocks from customer configuration; secret and data scan before publication; reuse evidence from a second engagement; versioning and release path; known-gaps register per block.
+
+**Worked example — Meridian Bank.** The bank engagement produced the most valuable single block in the library and the sharpest lesson about what must not be reused. The reusable part was a "no-external-endpoint" validation that ran as part of the apply pipeline and failed the build if any rendered configuration resolved to a public IP or a hosted service endpoint — a check that is trivial in an air-gapped or on-prem environment and almost always absent in a cloud one. The customer's specifics (which key management service, which secret store, which document management system) stayed in the bank's values file and never entered the block. The lesson recorded alongside it concerned three pieces of code that could not be generalised because they encoded the bank's own data structures; they were left in the engagement repository with an explicit note that they were not for general use.
+
+**See also — the internal developer platform and golden-path literature** (Backstage, 2020, and the platform-engineering practice around it) for the principle that paved paths beat documentation, and for how a platform team curates what becomes a default template.
+
+**Watch out for.** Extraction skipped because the engagement ended. Blocks containing customer values. Publishing unproven snippets. Provenance lost. Blocks that fork on first reuse. Credential scans run after publishing.
+
+**Done when.** Every engagement ends with a recorded extraction pass; published blocks are parameterised, versioned, scanned for secrets and customer data, and carry provenance plus a known-gaps note; at least one block has been adopted by a second engagement; and the extraction step appears in the engagement plan with a named owner.
+
+---
+
+#### F16. Contribute to open-source tools
+
+**Goal.** Fix upstream the problems you keep hitting, so the next engagement does not pay for them again.
+
+**How to do it.**
+
+1. **Fix upstream what you have already fixed locally.** The strongest contribution is the patch you wrote because the tool was wrong for you; it has a real user and a real bug report.
+2. **Read the contributor guide first** — licence, CLA or DCO, commit format, test requirements, review process — and get the paperwork right before writing code, because contribution friction is usually legal friction.
+3. **Start with the smallest useful change:** a documentation fix, a clearer error message, a missing test case, a small bug. A first contribution should be easy to review, because review attention is the scarce resource.
+4. **Include a failing test that reproduces the issue and passes with the fix.** A pull request without a regression test will be asked for one, and the resulting conversation is the real cost.
+5. **Write the issue first when the behaviour is a design question rather than a bug.** A well-argued issue that gets discussed upstream is often more valuable than a patch that gets rejected.
+6. **Be a good upstream citizen** — review others' pull requests, answer questions, and keep changes small and focused. The reputation carries the next contribution.
+7. **Recognise that upstream contributions and vendor conversations reinforce each other.** Being a credible contributor changes what maintainers will tell you about the roadmap.
+8. **Protect the client.** Do not contribute code that encodes client data, client-specific configuration, or anything the client's confidentiality terms forbid.
+
+**Artifacts.** Contribution log with upstream links; CLA or DCO records per project; a small first contribution; regression tests attached; issue-first write-ups for design questions; upstream review activity; a client-confidentiality check applied to each contribution.
+
+**Worked example — Northwind Mutual.** The engagement surfaced a bug in the chunking library used for scanned claims documents: tables were split across chunks at the page boundary with no separator, so a coverage-limit table reached the retriever as fragments, and the failure looked like a retrieval-quality problem for weeks. The fix was small, the reproduction was clean, and it was submitted upstream with a failing test — which is what turned it into an accepted change rather than a rejected patch. The wider benefit was that the upstream maintainer, once familiar with the case, began answering questions about document-structure handling instead of closing them, and the next two engagements on scanned documents avoided the debugging entirely because the fix was already upstream.
+
+**See also — the contribution mechanics of the major open-source AI infrastructure projects** (vLLM, LangChain, LangGraph) as a practical reference for CLA/DCO and test requirements, and the Python PEP and Rust RFC processes as models for arguing a design change in public before writing the code.
+
+**Watch out for.** Waiting until you are an expert before your first contribution. Large first pull requests. Pull requests without tests. Ignoring the licence or CLA process. Contributing code that leaks client specifics. Never reviewing upstream work.
+
+**Done when.** At least one upstream change has been merged with a regression test; the CLA/DCO paperwork is on file for each project contributed to; design questions have been raised as issues before code was written; contributions are reviewed in the client's confidentiality terms; and the contribution log is published with the reusable library.
+
+---
+
+#### Documented Cases Referenced
+
+Publicly reported cases used throughout Pillar F, cited for the decision pattern each illustrates.
+
+| Case | Year | Point it supports | Used in |
+|------|------|-------------------|---------|
+| **The Twelve-Factor App** (Adams et al.) — config in the environment, explicit dependency declaration, disposability, and one-off admin scripts run as the same release | 2011 | A deployment playbook is the operator-facing half of the twelve-factor method | F1, F2 |
+| **Diátaxis** (Dan Brown) — tutorial, how-to guide, reference, and explanation are four distinct genres that must not be blended | 2023 | Mixing genres is why deployment documentation becomes unusable | F6, F7 |
+| **"Documenting Architecture Decisions"** (Michael Nygard) — the ADR format: status, context, decision, consequences, with the rejected alternatives | 2011 | Record the decision and its reversal condition, not the design | F5, F15 |
+| **"Building Effective Agents"** (Anthropic) — the workflow-versus-agent distinction and a catalogue of composable patterns | 2024 | Patterns organise both a prompt library and a pattern-sharing session | F12, F13 |
+| **"Twelve-Factor Agents"** (Shanahan et al.) — agent applications are systems with their own operational concerns, not just prompts | 2025 | An agent deployment needs an operational model of its own | F8, F11 |
+| **"Rules of Machine Learning"** (Google) — document what did not work, keep code small and readable, ship and iterate | 2013, updated 2019 | Counter-cases and written-down failures are the valuable half of a record | F7, F14 |
+| **AWS Well-Architected Framework, Generative AI Lens** — six pillars organised as checks against a design | 2023–24 | A reference architecture should be consumable as a review checklist | F4, F13 |
+| **CNCF Cloud Native AI whitepaper** — shared platform components and pattern libraries for AI on cloud infrastructure | 2024–25 | Patterns and paved paths beat per-customer customisation | F9, F15 |
+| **EleutherAI `lm-evaluation-harness` and Hugging Face `evaluate`** — the task-set, documented-metric, single-command contract for evaluation | 2023–25 | A reusable eval component must expose this exact interface | F10, F3 |
+| **Backstage** (Spotify) — the software catalog and the paved path from a template to a running service | 2020 | Internal platforms make the right thing the default thing | F15, F4 |
+| **Python PEP 1 and the Rust RFC process** — argue the design in public before writing the implementation | 1994–onward, 2010–onward | Design questions upstream belong in an issue, not a patch | F16 |
+| **CLA and Developer Certificate of Origin** — the paperwork that gates a first contribution | 2004–onward | Contribution friction is usually legal friction | F16 |
+| **Promptfoo** — declarative evaluation and red-teaming configuration with reproducible runs | 2023–24 | Eval and red-team config should travel with the template | F10, F12 |
 
 </details>
 
