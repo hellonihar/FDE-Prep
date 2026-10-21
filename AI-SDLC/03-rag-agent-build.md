@@ -281,3 +281,4 @@ Every hop emits a trace span: retrieval query → filters → candidate IDs + sc
 - Previous: [Phase 2 — Infrastructure & Model Deployment](02-infrastructure-and-model-deployment.md)
 - Next: [Phase 4 — Evaluation & Red-Teaming](04-evaluation-and-red-teaming.md)
 - Source reference: [FDE-Responsibilities.md — Pillar C (RAG pipelines, agents, guardrails)](../FDE-Responsibilities.md) and [§8 RAG vs Fine-Tuning vs Agentic](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar C](../FDE-Responsibilities.md) expands the 20 model-deployment tasks as step-by-step procedures with templates, the same five worked business cases (Northwind Mutual, Meridian Bank, Corvid, St. Aldwyn Health, Halden & Rowe), and eleven publicly documented reference cases.
