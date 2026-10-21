@@ -255,3 +255,4 @@ Define POC → Pilot → Production with a scope, an owner, and an **exit criter
 - Next: [Phase 1 — Data & Readiness Assessment](01-data-readiness-assessment.md)
 - Previous phase: none — this is where it starts
 - Source reference: [FDE-Responsibilities.md — Pillar A (Discovery, Scoping & Architecture Design)](../FDE-Responsibilities.md) and [§8 AI Deployment Context Variations](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar A](../FDE-Responsibilities.md) expands the same 18 discovery tasks as step-by-step procedures with templates and five worked business cases (Northwind Mutual, Meridian Bank, Corvid, St. Aldwyn Health, Halden & Rowe) plus six publicly documented reference cases.
