@@ -1,6 +1,6 @@
 # Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 2.6
+**Version:** 2.7
 **Last Updated:** 2026-10-21
 **Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
@@ -51,7 +51,7 @@ The role decomposes into seven pillars:
 
 #### Case Index
 
-Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), Pillar D (evaluation), Pillar E (production operations), and Pillar F (knowledge transfer), with their infrastructure, model, evaluation, operational, and handover shapes fixed there.
+Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), Pillar D (evaluation), Pillar E (production operations), Pillar F (knowledge transfer), and Pillar G (feedback to research and product), with their infrastructure, model, evaluation, operational, handover, and feedback shapes fixed there.
 
 | # | Case | Sector & Scale | The Ask | Hard Constraint | Instructive Because |
 |---|------|----------------|---------|-----------------|--------------------|
@@ -3203,8 +3203,22 @@ Publicly reported cases used throughout Pillar F, cited for the decision pattern
 
 ### Pillar G: Feedback Loop to Research & Product
 
+> **Phase playbook:** [AI-SDLC Phase 6 — Production Optimization](AI-SDLC/06-production-optimization.md) closes the loop, with the Research and Model Team named as the recipients of reproducible failure cases and the Product Owner as the destination of field evidence. This section is the *how* — procedures, templates, and worked cases.
+
 <details>
-<summary><b>12 core tasks</b> (click to expand)</summary>
+<summary><b>12 core tasks — detailed breakdown</b> (click to expand)</summary>
+
+#### Case Index
+
+The same five cases recur here with their feedback shape fixed: what the signal looks like, who is allowed to receive it, and which constraint governs the channel. Read this table before designing any feedback path.
+
+| # | Case | Feedback Shape | Signal Volume | Who Receives It | Binding Constraint | Teaches |
+|---|------|----------------|---------------|----------------|--------------------|---------|
+| **1** | **Northwind Mutual** | Field failures are decisions on claims; the vendor keeps the model and index, so the evidence loop is indirect and the customer is a regulated counterparty | Low volume, high severity — an override or a complaint is a single event worth a week of analysis | Internal research (model behaviour) and the shared library, after customer-governed reduction | Medical PII; no customer data to vendor tooling; state rules change monthly | Field signal must be reduced to a reproducible, PII-free case before it can leave the customer's environment |
+| **2** | **Meridian Bank** | The customer's team holds the platform, so the raw signal never reaches the vendor; feedback travels as governed extracts through an agreed script | Moderate volume, engineering-grade — traces and control totals, sanitised | The bank's own team first; the vendor's research only through the redaction script the customer approved | SEC/FINRA; immutable audit; no external telemetry | The feedback channel is designed with the customer, not extracted from them |
+| **3** | **Corvid** | Vendor-managed, so the FDE holds the entire signal; very high volume, thin detail per case, and cost pressure dominating quality in the ranking | Very high — 12k tickets a day, sampled for structured data rather than read individually | Product (cost and routing) and research (model behaviour), both from the same structured record | $0.04/request; 4s ceiling; EU residency; 24/7 expectations | Volume plus a cost ceiling changes what is worth escalating at all |
+| **4** | **St. Aldwyn Health** | Safety-critical and human-in-the-loop: every failure is a clinical near-miss, and the signal is a clinician's judgement rather than a metric | Low volume, extreme severity — a near-miss is a clinical safety event first and a data point second | Research (safety) and product, with clinical sign-off before anything leaves the hospital | PHI; air-gapped; a physician verifies every output; 24/7 clinical availability | The most important field signal arrives as a human judgement, and it needs a clinical owner |
+| **5** | **Halden & Rowe** | Smallest volume, richest qualitative signal: 30 junior lawyers produce feedback at the moment of use, in plain language, with no engineering filter | Low volume, high quality of signal — 30 users describing what confused them | Product (usability and API) and the shared library | Privilege; per-matter isolation; no external API | The feedback that most changes the product comes from the least sophisticated users |
 
 - [ ] Collect structured field data: model failure modes, edge cases, capability gaps, latency bottlenecks, cost pain points
 - [ ] Capture customer feature requests: SDK improvements, model capabilities, platform features, integration connectors
@@ -3218,6 +3232,361 @@ Publicly reported cases used throughout Pillar F, cited for the decision pattern
 - [ ] Contribute to platform gap analysis: where the product is missing capabilities that customers need
 - [ ] Share anonymized deployment learnings across the FDE team: what works, what doesn't, emerging patterns
 - [ ] Participate in product design reviews: provide field perspective on upcoming features, UX decisions, API design
+
+---
+
+#### G1. Collect structured field data
+
+**Goal.** Turn what happened in production into a dataset rather than a story — the difference between a field report that can be prioritised and one that gets filed.
+
+**How to do it.**
+
+1. **Fix the taxonomy before you collect anything.** Define the field schema once and reuse it across every engagement: failure category, task type, input characteristics, model/prompt/index version, user impact, how it was detected, the workaround, and a link to the evidence. Ad-hoc categories are the reason two engineers report the same defect under different names and the trend line never straightens.
+2. **Capture at the point of detection, automatically where possible.** A structured field on a trace, a thumbs-down, a correction, a support tag, or an adjuster override is worth ten times a retrospective paragraph, because the writer of a retrospective is a person with a reason to be vague.
+3. **Make every report carry a reproduction handle** — trace ID, request ID, eval case, or a redacted screenshot — so the finding can be looked at rather than believed.
+4. **Separate the symptom from the mechanism.** "Wrong answer" is a symptom; "retrieved a superseded clause because the index was not refreshed before the manual re-issue" is a mechanism, and only the mechanism can be routed to an owner who can fix it.
+5. **Record how the system failed, not only that it failed.** Did it refuse, fabricate, degrade silently, or spend forty times its normal cost? The failure behaviour determines the severity and who must be told, and "silently wrong" is a categorically different event from "loudly wrong".
+6. **Attach the cost and latency of every incident.** Pain with a number on it — "this pattern adds $0.011 per request on 30% of traffic" — gets prioritised; pain described qualitatively does not.
+7. **Use fixed buckets for the large categories** (latency, cost, quality, safety, integration) so the data can be trended over months, and keep a free-text field for the thing that does not fit yet.
+8. **Give the intake a named triage owner.** A feedback channel without triage decays into a graveyard inside a month, and the signal that is lost is usually the earliest instance of a pattern.
+9. **Keep the raw artefact next to the structured record.** The structured field is what gets analysed; the raw evidence is what gets verified, and only one of them survives contact with a sceptic.
+
+**Artifacts.** Field-data schema and taxonomy with fixed buckets and a free-text escape; structured capture hooks in the observability stack; intake channel with a named triage owner; defect card template; severity and reproducibility fields; monthly trend report produced from the records; raw-to-structured reconciliation check.
+
+**Worked example — Corvid.** The field-data problem here was volume without signal: 12,000 tickets a day generated far more potential findings than anyone could read, and the natural response was to read none. The structured schema collapsed everything into five buckets, and the single most valuable field turned out to be "workaround used" — every ticket where an agent had to rephrase the question before the answer was accepted was tagged. The tag exposed a routing defect worth a large share of the $0.04 cost ceiling: a class of short, status-style queries that the model answered at full cost and full length instead of being served from the macro store. That was a product signal, not a quality bug, and no support-queue review would ever have surfaced it.
+
+**See also — Google's "Rules of Machine Learning"** (2019) puts instrumentation first and insists on writing down what did not work; a structured field taxonomy is the practical form of that advice for an FDE working in a customer's environment.
+
+**Watch out for.** Free-text-only field reports. Symptom-level categories that cannot be trended. Findings with no reproduction handle. The same defect reported under three names. Severity assigned by the reporter's mood. A feedback channel with no triage owner.
+
+**Done when.** One schema with fixed buckets and a free-text escape is in use across the engagement; every report carries a reproduction handle, a failure-behaviour classification, and a cost or latency figure where one exists; intake has a named triage owner; and the monthly trend is produced from the records rather than from memory.
+
+---
+
+#### G2. Capture customer feature requests
+
+**Goal.** Record what customers ask for in a form Product can act on — the request, the reason, the evidence, and the cost of doing without it.
+
+**How to do it.**
+
+1. **Capture the request verbatim first, and paraphrase second.** The customer's own words carry the priority and the vocabulary Product will need to make the case internally; the paraphrase is what you use to make it portable.
+2. **Attach the reason and the trigger:** which workflow breaks, what the workaround costs, and how many people hit it. "We want X" is weaker than "our team retypes forty documents a day because X is missing".
+3. **Quantify the workaround cost in the customer's terms** — hours, money, or delay — and be honest when it is small. A request with a trivial workaround may not deserve roadmap space, and overstating it spends credibility you will need later.
+4. **Keep the customer anonymous but the situation specific.** A request identified only by company name will be deprioritised; a request described as "first-pass document review for thirty junior lawyers at a 220-law firm" is portable and stays confidential.
+5. **Separate three things: a capability gap, a missing feature, and a misconfiguration or missing documentation.** Roughly a third of "we need a feature" turns out to be one of the other two, and escalating them to Product wastes the strongest advocate you have.
+6. **Log the request where the roadmap process can see it, on the day it is made,** and link it to the engagement and to the pattern it came from. A request tracked in the FDE's notes is a request that dies.
+7. **Note the consequence of not building it** — the workaround that will grow, the risk that will be taken, the customer who will build it themselves in-house. That consequence is frequently what changes a priority.
+8. **Ask the customer to rank it against their own other requests.** Customers hold relative priorities even when they cannot price an individual item, and their ranking is stronger evidence than your estimate of the value.
+9. **Review the log quarterly and close what will not happen,** with a reason and with the customer told. A request list that never closes teaches customers that asking is pointless.
+
+**Artifacts.** Feature-request card (verbatim ask, trigger, workaround cost, affected users, consequence if unbuilt, customer ranking); triage rule separating capability gap, feature, and misconfiguration; link from each card into the roadmap tracker; quarterly review with explicit closures; customer-facing status updates.
+
+**Worked example — Halden & Rowe.** The firm asked for "the AI to remember the deal terms we agreed last week." Captured properly, the request decomposed into three parts. A long-term-memory feature was one. Another was that per-matter isolation meant the system had no legal basis to recall across matters at all, which was a constraint the firm had itself set and would not trade. The third was a documentation request — nobody had told them that matter-scoped recall was the default and that it was deliberate. One part was a roadmap item, one was a non-negotiable, and one was a documentation fix. The FDE who separated them avoided escalating a request that would have been rejected on confidentiality grounds, and the workaround cost — roughly twenty minutes of re-briefing per matter for the lawyers who used it — is what let the request survive a quarterly review that a vague "customers want memory" would not have.
+
+**See also — evidence-based request practice in product discovery**: a request stated as a problem with a measured cost survives prioritisation far better than a request stated as a feature, because the roadmap can be argued with about the outcome and only with you about the implementation.
+
+**Watch out for.** Verbatim requests with no reason attached. Workaround cost guessed rather than measured. Requests that are really documentation issues. Requests tracked in a personal notebook. An open log that is never closed. Overstating the cost to win a slot.
+
+**Done when.** Every request has a card with the verbatim ask, the trigger, a measured workaround cost, the affected users, the consequence of not building it, and the customer's own ranking; capability gaps, features, and misconfigurations are routed separately; each card is linked into the roadmap tracker; and every request in the log has a decision and a date.
+
+---
+
+#### G3. Document specific model weaknesses
+
+**Goal.** Convert "the model is bad at X" into a characterised, reproducible behaviour with a documented pattern — the form in which a research team can actually act on it.
+
+**How to do it.**
+
+1. **Name the behaviour, not the verdict.** "Does not follow an instruction to cite the source for every numeric limit" is a behaviour; "the model is unreliable" is a verdict, and a verdict cannot be acted on.
+2. **Characterise it as a task:** a stimulus, a constraint, and an expected behaviour, so it can be re-run. A weakness that cannot be reproduced cannot be fixed, and cannot be shown to have been fixed.
+3. **Triage the layer before you escalate the model.** Send the same stimulus directly to the model and through the system. If the system fails and the model does not, the cause is in retrieval, chunking, context assembly, or the prompt, and it belongs to the application team. This single check is the highest-value step in the whole task, and skipping it is the standard way an application defect is spent as a research ticket.
+4. **Quantify the rate, not the instance.** A rate with a population — "fails on roughly 8% of multi-constraint instructions, a fifth of which are formatting-only" — is actionable; an anecdote is not.
+5. **Describe the shape of the failure, not just the instance:** omitted clause, contradictory statements, invented citation, refusal, premature answer, format violation. The shape generalises into a fix and into a test case; the instance does not.
+6. **Record the boundary conditions:** prompt length, language, domain, structured versus free-form input, multi-turn state, and the exact model version. A weakness reported without its boundary is half a report.
+7. **Check whether it is already documented upstream** — model cards, provider changelogs, and known-issue lists. A good share of what looks like a novel weakness is a documented behaviour with a workaround.
+8. **Write it so research can use it without you:** minimal repro, expected versus actual, frequency, boundary, and what would count as fixed.
+9. **Do not send general impressions upstream.** "The model gets long documents wrong" will be deprioritised, and the team will learn that your reports are not actionable — which costs you the next genuinely important finding.
+
+**Artifacts.** Weakness record (behaviour, minimal repro, rate, boundary conditions, output shape, impact, suspected layer, workaround); triage decision log separating model behaviour from application behaviour; batch report to research on a fixed cadence; re-test protocol for confirming a fix; link from each record to the eval case that reproduces it.
+
+**Worked example — Northwind Mutual.** The field claim was that the model "hallucinates coverage limits." Triaging it changed the finding entirely: the same stimulus sent directly to the model produced the limit correctly, while the system failed because the retriever had returned a table that chunking had split across a page boundary. The coverage-limit rows sat in two separate chunks, so the model saw a partial table and completed it plausibly. The weakness was real, but it was not the model's — it was a chunking defect that had been mislabelled as a model problem for two weeks, while research was never told and the local fix was never prioritised. The record that finally went upward described the model's actual behaviour: partial tables with no row markers are completed with confident interpolation, at a measurable rate, worse on multi-page tables. The chunking fix shipped locally the same week, and the lesson was written into the report template — confirm the layer before you escalate the model.
+
+**See also — model and system cards** (Google, Anthropic, and others, 2023–25) model a known limitation as a reproducible task with a stated boundary, which is exactly the shape a field weakness report should take; the systematic failure-mode taxonomies in the red-teaming literature give the vocabulary for the output shapes.
+
+**Watch out for.** Verdicts instead of behaviours. Weaknesses with no repro. Escalating a chunking bug as a model bug. Rates quoted without a population. No boundary conditions. No check against the upstream known-issues list. Reports with no statement of what would count as fixed.
+
+**Done when.** Every escalated weakness is stated as a behaviour with a minimal repro, a measured rate, an output shape, boundary conditions, and a suspected layer that has been triaged; each links to an eval case that reproduces it; and each names what would count as fixed.
+
+---
+
+#### G4. Build eval datasets from real customer queries
+
+**Goal.** Turn live customer traffic into a permissioned, anonymised, reproducible evaluation set — the single most valuable thing an FDE can send upstream.
+
+**How to do it.**
+
+1. **Get permission explicitly, in writing, with the scope stated:** which customers, which data classes, what may be extracted, what may be shared, and with whom. "It was in the shared drive" is not permission, and a request that arrives without a scope will be refused at the least convenient moment.
+2. **Anonymise at capture, not afterwards.** Redact inside the pipeline, at the point of extraction, and keep the raw material inside the customer's boundary. The number of people who can see unredacted data should be as close to zero as the process allows, and shrinking it late is impossible.
+3. **Sample by structure, not at random.** Stratify across task type, difficulty, length, language, document type, and the failure slices you care about. A uniform random sample of production traffic over-represents the easy cases and under-represents the ones you need to measure.
+4. **Keep the failure cases and the near-fails.** The production queries that produced an override, an escalation, a regeneration, a rephrase, or an abandonment are the dataset's value; the ones that worked first time teach nothing.
+5. **Label the difficulty and the expected behaviour, not only the answer.** A set with a difficulty field is what lets a research team separate "the model got it wrong" from "the task was ambiguous", and those two demand opposite responses.
+6. **Keep the labels human-authored and versioned.** A set edited to make a run pass measures nothing; the one thing a production-derived dataset must never become is a scratchpad.
+7. **Split it deliberately:** a development set and a held-out set that is never edited, never shared outside the team that owns it, and never used to tune anything.
+8. **Record provenance for every case** — customer, date, source, labels, and the permission it falls under — so that a new model version can be measured on the same material and the two results are comparable.
+9. **Ask what the dataset would teach a model if it were ever trained on it.** A set drawn from production traffic carries the answer distribution of the production system, which is exactly what a training set would learn; the held-out half must be quarantined harder than the rest.
+
+**Artifacts.** Written data-sharing permission with an explicit scope; extraction and redaction pipeline that runs inside the customer boundary; stratified sampling plan; difficulty and expected-behaviour labelling guide; development and held-out split with quarantine rules; provenance register; dataset card describing contents, limits, and prohibited uses.
+
+**Worked example — St. Aldwyn Health.** The most valuable evaluation data in the engagement was the set of discharge summaries the physicians had edited, and the most valuable labelling of all was done by the physicians themselves: for each edited summary they marked the type of edit — wrong date, missing finding, invented detail, wrong dose, formatting. That edit-type distribution is a precise statement of what the model got wrong, and it is exactly what a research team needs: not "the summaries need work" but "invented detail in 4% of summaries, always in the medication list, always for a drug that appears in the discharge paperwork but not the admission record". Extracting it was also the hard part, because PHI meant nothing could leave the hospital network — the extraction ran on a workstation inside the site, produced a redacted export, and the only thing that crossed the boundary was the labelled set. The permission was written before the extraction, naming what would be extracted and what would not, and it took two weeks longer than the technical work would have.
+
+**See also — "Datasheets for Datasets"** (Gebru et al., 2021) for the documentation discipline a permissioned dataset needs, and the model-collapse finding on recursively generated data (Shumailov et al., Nature, 2024), which is the reason a production-derived set must keep a human-authored, quarantined held-out half.
+
+**Watch out for.** Extracting before permission is signed. Anonymising after the data has already travelled. Uniform random sampling. Only the successful queries. Labels produced by a model. Editing the held-out set. Datasets with no provenance.
+
+**Done when.** A written permission with an explicit scope is on file; the extraction and redaction run inside the customer boundary; the set is stratified, difficulty-labelled, and split with a quarantined held-out half; every case carries provenance; and a dataset card states what the set may and may not be used for.
+
+---
+
+#### G5. Partner with Research on evaluation design
+
+**Goal.** Design evaluations that answer the question research is actually asking, and be able to interpret the results honestly — including when the result is inconvenient.
+
+**How to do it.**
+
+1. **Start from the decision, not the metric.** "Should we recommend model X over Y for this workload?" is a decision; "what is pass@1 on our golden set?" is a measurement. Write the decision first, then choose the metric that informs it, then the threshold that would change the decision.
+2. **Calibrate the judge against humans before you rely on it.** Report the agreement rate on a sample of human-labelled cases, and characterise the disagreements rather than quoting only the rate. An uncalibrated judge produces a number nobody can act on, and it is worse than no number because it will be believed.
+3. **Design for the workload, not the benchmark.** Distribution matters: the real traffic mix, the real document lengths, the real instruction density, the real refusal rate. Public benchmark suites are for ranking models in general; they do not predict field performance in a specific workflow.
+4. **Slice the results.** A single aggregate over a customer workload hides a failing subpopulation, and the failing subpopulation is what reaches production and reaches a regulator.
+5. **Separate "can it" from "should it".** Capability, safety, and refusal behaviour are different evaluations with different thresholds. Conflating them produces either a system that answers everything or one that answers nothing.
+6. **Agree the interpretation rules before you see the results** — what counts as a regression, what the noise floor is, what size of change is meaningful, and what happens if a slice fails. Deciding afterwards turns every run into a negotiation.
+7. **Publish the set version, the harness version, and the parameters with every result,** so that two results are comparable or clearly not.
+8. **Report the results you dislike.** A research partner who discovers that your reports are curated will discount all of them, including the one that mattered.
+9. **Bring production reality into the design** — real failures, real traffic, real operational constraints. Research is usually working with clean data and no on-call burden, and the interesting cases live in the field.
+
+**Artifacts.** Evaluation design document (decision, metric, threshold, noise floor, interpretation rules); judge calibration report with agreement rate and characterised disagreements; workload-representative sampling plan; slice definitions with per-slice thresholds; separation of capability, safety, and refusal evaluation; standard result format carrying set and harness versions; joint research session notes.
+
+**Worked example — Northwind Mutual.** The question research asked was narrow: "is the newer model acceptable for regulated claim drafting, where a human reviews every output?" The evaluation therefore had to model the human in the loop rather than the model alone, so it measured the pair — the model's output plus the reviewer's time to catch an error — and set the threshold on time-to-catch rather than on accuracy. The judge calibration mattered more than usual because the unit of judgement was regulatory: a missed coverage limit was a blocking failure, which made the judge's false-negative behaviour the risk that mattered, so the calibration deliberately over-weighted cases containing numeric limits. The joint session then produced a finding neither side had expected — the newer model was more accurate on claims prose but systematically more confident on numeric limits, which is worse in a workflow where the reviewer calibrates their attention by how sure the output sounds.
+
+**See also — MT-Bench and LLM-as-a-Judge** (Zheng et al., 2023) for the framing of judge agreement as a calibration problem, and the companion findings on position, verbosity, and self-enhancement biases in LLM judges (Wang et al., 2024), which is why the disagreements have to be characterised and not just counted; **HELM** (Stanford CRFM, 2022–23) is the reference for reporting a whole trade-off profile instead of one headline number.
+
+**Watch out for.** Metrics designed before the decision. Uncalibrated judges. Benchmark results presented as workload results. One aggregate where slices were needed. Thresholds agreed after seeing the numbers. Results reported without set and harness versions. Reporting only the good runs.
+
+**Done when.** Every evaluation starts from a stated decision; judges are calibrated against human labels with the disagreements characterised; results are reported per slice with capability, safety, and refusal separated; the set version, harness version, and interpretation rules travel with every result; and results that were unfavourable were reported.
+
+---
+
+#### G6. Partner with Product on roadmap input
+
+**Goal.** Turn field patterns into roadmap input that survives prioritisation — a problem statement with evidence attached, not a list of asks.
+
+**How to do it.**
+
+1. **Aggregate before you escalate.** One customer asking is a request; five customers in four accounts asking the same thing is a roadmap item. Build the count, the anonymised account list, and the shape of the common need.
+2. **Lead with the cost of the status quo, quantified.** Hours, dollars, days of delay, risk exposure, and the number of users affected — measured, not estimated, and expressed in the currency the sponsor cares about.
+3. **Separate the pattern from the feature.** "Forty deployments manually re-embed because there is no incremental embedding update" is a pattern; "add an --incremental flag" is a proposed solution, and leading with the solution is the fastest way to be argued with about implementation.
+4. **Show the customer mix.** A pattern that appears only in one vertical is a niche feature; the same pattern across a regulated insurer, a regional bank, and a hospital is a platform capability, and that distinction changes the queue it lands in.
+5. **Bring a rough implementation cost.** A team that knows which of twenty patterns costs a week and which costs a quarter will order the work differently from a team with no estimates, and the estimate costs you one afternoon.
+6. **State what you are not asking for, and what you would accept instead.** A request with a stated acceptable alternative is much easier to schedule than an open-ended ask, and the alternative often ships sooner.
+7. **Keep a customer-impact ledger per request,** so Product can answer "who is blocked by this" and Customer Success can manage the expectation without you in the room.
+8. **Re-test demand before it is scheduled.** A pattern from four quarters ago may have been resolved by a configuration change, a new model release, or a customer workaround, and stale input quietly teaches the team to discount your input.
+9. **Feed the negative results back too.** "We tried this in two accounts and it did not work, and here is why" prevents a feature that solves a problem nobody has.
+
+**Artifacts.** Pattern dossier (pattern, accounts, volume, cost of the status quo, customer mix, rough build cost, acceptable alternatives, last demand check); customer-impact ledger; quarterly demand re-test; negative-results log; accept/reject record with the reason shared back to the field.
+
+**Worked example — Halden & Rowe.** The pattern that reached the roadmap was not a Halden feature request at all. Across three accounts the same thing had happened: junior users did not know when to trust a draft, and each account had solved it locally with a different convention — a confidence label in one, a review checklist in another, a visible sources column in the third. Aggregated, that became a platform problem: the output format did not carry the information users needed in order to decide how much effort to spend reviewing it. The dossier led with the cost of the status quo in the one metric the sponsor cared about, which was time to a defensible first draft, and it estimated the build at roughly a week. Halden's own request was then one of four instances, and it was scheduled into a later release than that customer wanted, which was manageable because the customer-impact ledger turned the conversation into a question about the other three accounts rather than about Halden being deprioritised.
+
+**See also — the "paved path" and pattern-library argument** in the CNCF Cloud Native AI whitepaper (2024–25) and the golden-path practice in platform engineering: the roadmap argument that wins is the one about removing a repeated cost, not the one about adding a capability.
+
+**Watch out for.** Escalating single-customer requests. Leading with a proposed feature. Pattern counts without a cost. Stale demand. No customer-impact ledger. A dossier that reads as an opinion rather than a measurement.
+
+**Done when.** Every roadmap input is a dossier with the pattern, the accounts affected, a measured cost of the status quo, the customer mix, a rough build cost, and stated acceptable alternatives; each has a customer-impact ledger; demand is re-tested before scheduling; and rejected inputs are recorded and communicated back to the field.
+
+---
+
+#### G7. Participate in model evaluation cycles
+
+**Goal.** Test a new model version against real customer workloads and report a trustworthy verdict — not a leaderboard position.
+
+**How to do it.**
+
+1. **Test on the customer's workload, the customer's data, against the customer's thresholds.** A new model release is a candidate release for that specific system, and it is measured against that system's bar, not against a public benchmark's.
+2. **Re-run the whole suite** — golden set, safety suite, latency, and cost. A model change moves all four, and quality is what people notice while latency and cost are what they actually feel. A candidate that improves accuracy and blows the latency budget is not an improvement.
+3. **Test the regression first, not the average.** New versions usually improve the average and break specific behaviours. Run the known-failure set and the customer's incident-derived regression cases before running anything else.
+4. **Verify the version you were given is the version you are evaluating.** Pin the model identifier and the provider's snapshot, and read the changelog for silent behaviour changes, new default sampling parameters, and changes to tool-calling or structured-output formats.
+5. **Run a shadow comparison before switching:** the same traffic, both models, no user exposure, with a per-request diff. A diff is more informative than two aggregate scores, because it shows where the models disagree rather than which one is better on average.
+6. **Quantify the operational consequences:** p95 and p99 latency, cost per request, behaviour at long context lengths, and the rate of malformed outputs that break downstream parsing.
+7. **Test the structured and tool-calling behaviour explicitly.** These change more often than prose quality and break applications in a way that is routinely misattributed to the application.
+8. **Test in the customer's environment when the constraints matter.** A model that is fine at cloud scale may not be fine on a CPU-only workstation, and an air-gapped or latency-bound deployment changes the answer entirely.
+9. **Report the verdict with its caveats** — the set, the version, the thresholds, the environment, and the slices that did not improve. A verdict without its caveats will be quoted without them.
+
+**Artifacts.** New-model test plan against customer workloads; golden set, safety, latency, and cost runs; per-request shadow diff report; regression and malformed-output report; version and snapshot pinning record; go/no-go recommendation with stated caveats; re-test schedule for the next release.
+
+**Worked example — Corvid.** The new model was better on the public benchmark and worse for this deployment, and the engagement found it in the first week. The new version was measurably more verbose, and because the cost ceiling was $0.04 per request, the extra tokens consumed the margin the accuracy improvement had created. The shadow run was the decisive artefact, because the per-request diff showed a consistent pattern: the new model added a preamble sentence to roughly 40% of short status answers, which is exactly the class of query the routing layer was designed to keep off the expensive path. The verdict was "do not adopt", with the cost-per-request projection at the new version and a note that the model was genuinely better on the long-tail questions that made up a small share of traffic. A leaderboard would have produced the opposite recommendation, and the cost ceiling would have been discovered only after launch.
+
+**See also — METR's time-horizon evaluations** (2025) for the practice of measuring reliability under sustained load rather than single-shot success, and the general release discipline of treating a model version change as a candidate requiring evaluation against owned thresholds rather than as an upgrade to be adopted on the strength of a published score.
+
+**Watch out for.** Testing only the golden set. Adopting on a benchmark result. Running the average before the regression set. Trusting the version label without pinning the snapshot. Switching before a shadow run. Ignoring latency and cost because quality improved. Verdict published without caveats.
+
+**Done when.** Each candidate version was tested on the customer's own workload against the customer's own thresholds, across quality, safety, latency, and cost; the regression set ran first; a per-request shadow diff exists; the exact snapshot is pinned; and a go/no-go verdict is published with its caveats and a scheduled re-test.
+
+---
+
+#### G8. Identify repeatable field patterns
+
+**Goal.** Recognise the things that keep happening, so they can be routed, productised, or designed away — before they harden into anecdotes.
+
+**How to do it.**
+
+1. **Look for recurrence in the data, not in memory.** Count occurrences across engagements, across accounts, and across time. A pattern that appears once is an anecdote; a pattern that appears in four of six deployments is a constraint of the work.
+2. **Classify each pattern:** integration friction, architecture decision, data-shape problem, missing capability, user-behaviour pattern, or a constraint of the customer's environment. The class determines the destination — the shared library, Product, Research, or the customer themselves.
+3. **Compare across engagements, not only within one.** A pattern that is invisible inside a single account becomes obvious once three accounts are compared, and the comparison is the specific value the FDE role adds.
+4. **Attach the cost.** Hours of engineering, dollars of infrastructure, days of schedule, or a support burden. A pattern with no cost attached will not be prioritised by anyone, however obviously true it is.
+5. **Distinguish the pattern from the workaround.** Customers build workarounds around the same underlying constraint in every deployment; the workaround is the visible artefact, and the constraint is the valuable finding.
+6. **Record the counter-cases** — where the pattern did not appear, and why. The boundary conditions are what make a pattern safe to generalise rather than dangerous to generalise.
+7. **Write it as a trigger:** "when X is true, expect Y." That form is usable by the next engineer at scoping time, which is where it saves the most work.
+8. **Promote it deliberately.** A pattern seen three times has earned a place in the shared library, in a template, and in a pre-sales question set. Left in one engineer's notes, the same three weeks of work happens a fourth time.
+
+**Artifacts.** Pattern register (pattern, class, occurrences, accounts, cost, boundary conditions, trigger phrasing, destination); monthly cross-engagement comparison; counter-case log; promotion criteria with status (observed, triaged, in library, productised); link from each pattern to the artefacts it produced.
+
+**Worked example — Meridian Bank.** Across the bank engagement a pattern appeared that was invisible from inside it: the hardest part of every deliverable was not the AI but the audit trail — the evidence of who changed what, when, and why, in a form the bank's examiners accepted. The same requirement, in the same shape, appeared in the Northwind engagement, where the claims manual changed monthly and every re-issue needed a defensible record of which version answered which claim. The cost was real: each occurrence cost roughly a week of engineering to retrofit, because it was never designed in, only added. The pattern was promoted from an observation to a first-class item in the reusable library — a change-record and release-record generator — and it was added to the pre-sales question set, so it is now asked at discovery rather than discovered at handover.
+
+**See also — the "lessons learned" and review-mechanism practice in the AWS Well-Architected Framework**, and the general argument in the CNCF Cloud Native AI whitepaper (2024–25) that shared patterns are what turn a set of individual deployments into a platform.
+
+**Watch out for.** Patterns asserted from a single incident. No cost attached. Workarounds mistaken for problems. No counter-cases, so the pattern gets over-generalised. Findings kept in one engineer's notes. A register that is never re-read.
+
+**Done when.** The pattern register records, for each pattern, its class, occurrence count, accounts, cost, boundary conditions, trigger phrasing, and destination; a monthly cross-engagement comparison is published; counter-cases are logged; and patterns meeting the promotion threshold are reflected in the library, the templates, and the pre-sales question set.
+
+---
+
+#### G9. Convert friction points into product feature requests
+
+**Goal.** Turn a recurring friction into a formal, evidence-backed, correctly-shaped request — the unit a roadmap can actually schedule.
+
+**How to do it.**
+
+1. **Write it as problem, population, current cost, and proposed outcome.** The implementation is a proposal, and putting it in the headline converts a request into a decision you will lose.
+2. **Quantify the current cost with the customer's own numbers, and say whose budget it is.** "This consumes about thirty hours a week across six accounts" is a different object from "teams find this annoying", and only the first one can be scheduled.
+3. **Attach the evidence bundle:** the pattern register entry, the traces or tickets, the customer quotes, and the number of accounts affected. The bundle is what allows a request to survive a prioritisation meeting where you are not present.
+4. **Rank against the alternatives, including doing nothing.** State explicitly what happens if the request is not built — the workaround grows, a customer builds it themselves, or the pattern blocks the next deployment. Doing nothing has a cost and it belongs in the comparison.
+5. **Be honest about scope and offer the smallest version.** A request with a small first slice gets scheduled; a request for a whole platform does not. Say what the smallest slice would be and what it would leave unsolved.
+6. **Check whether the gap is intentional.** A missing capability may be a deliberate product boundary, and a request that ignores the strategy is closed for the wrong reason, which burns the relationship and the next request.
+7. **Have a second FDE sanity-check the evidence before submitting.** Your own first reading of your own data is the most generous one available, and the request is going to be read by people who will not re-derive it.
+8. **Track it to a decision and close the loop with the customer either way.** An unanswered request is worse than a refusal, because it teaches the customer that the channel is not real.
+
+**Artifacts.** Formal request template (problem, population, current cost, proposed outcome, smallest slice, alternatives, cost of inaction); evidence bundle standard; intent check against product strategy; submission log with decision and date; customer feedback loop for every decision, including rejections.
+
+**Worked example — Halden & Rowe.** The friction that reached Product was not the firm's own request; it was that per-matter isolation, a deliberate confidentiality design, meant the same document had to be re-indexed once per matter. At one matter per day this was invisible. Across the account it was a recurring re-index that produced a duplicate, slightly different copy of the same clause, and two of those copies had already drifted, so the same clause was retrievable in two versions. The request was therefore written as a problem — "duplicate and divergent copies of the same clause across matters" — with a cost of roughly one re-index per matter and a risk of contradictory answers, and the smallest slice proposed was a content-hash check at ingestion that warns before a second copy is created. It was a security-adjacent change to a confidentiality feature, which is exactly why the intent check mattered: the product boundary was deliberate, so the request had to be shaped as "warn on divergence" rather than "share across matters", which is what made it schedulable at all.
+
+**See also — the friction-to-request discipline in product discovery** and the "golden path" argument in platform engineering: a request is far stronger when it is framed as removing a repeated cost from the paved path than when it is framed as a missing feature.
+
+**Watch out for.** Solution-shaped headlines. Costs that are estimates. No evidence bundle. Missing the cost of inaction. A request that ignores a deliberate product boundary. No second reader. Requests that vanish without a decision.
+
+**Done when.** Every submitted request states the problem, the affected population, a measured current cost, the proposed outcome, the smallest slice, and the cost of inaction; it carries the evidence bundle, has passed an intent check against product strategy, has been reviewed by a second FDE, and has a logged decision with a date and a customer-facing outcome.
+
+---
+
+#### G10. Contribute to platform gap analysis
+
+**Goal.** Map where the platform cannot do what customer deployments need, so the gaps are found in the field rather than in a support ticket.
+
+**How to do it.**
+
+1. **Keep the gaps as a maintained list, not as a memory.** Gap, affected engagements, workaround, cost, and whether it is a deliberate boundary. A list assembled from recollection is a list of grievances rather than an analysis.
+2. **Sort them into categories:** missing capability, missing ergonomics, missing observability, missing documentation, missing guardrails, and missing scale. They have different destinations and very different urgency, and a documentation gap treated as a capability gap will be closed the wrong way.
+3. **Measure the workaround cost.** A gap that every customer works around with twenty lines of code is an ergonomics or documentation problem; a gap that costs a week of engineering each time is a capability gap, and the two should not compete for the same roadmap slot.
+4. **Look for systemic gaps rather than per-engagement ones.** The same missing capability discovered in three accounts is one platform gap, not three, and counting it once is the difference between a signal and noise.
+5. **Distinguish "the platform cannot" from "I did not know the platform could."** A large share of reported gaps is a discoverability failure, and its fix is a cookbook entry rather than a roadmap item — a much cheaper, much faster resolution.
+6. **Say which gaps are deliberate.** A platform that says "this is out of scope, and here is the supported alternative" has effectively solved the gap; a platform that is silent about it will keep generating workarounds in every account.
+7. **Rank by the size of the blocked population and the size of the block,** and present it that way: what does this gap prevent from happening, and how many deployments are waiting on it.
+8. **Keep the list honest about the gaps you will not close,** with reasons, so it reads as a decision aid rather than a wish list. A list where everything is urgent is a list that is sorted by nothing.
+
+**Artifacts.** Platform gap register (gap, category, engagements affected, workaround, workaround cost, deliberate boundary, destination); workaround cost model; cookbook and discoverability gap list; quarterly gap review with the platform team; traceability from gap to roadmap item; supported-alternative notes for out-of-scope boundaries.
+
+**Worked example — Meridian Bank.** The gap analysis found that most of the "platform gaps" the engagement reported were not platform gaps at all; they were discoverability gaps. The platform could do most of what the engagement needed, but nothing told the engineers which features existed or how to find them, so the team had built local workarounds for things the platform already handled — including a custom re-embedding scheduler that the platform's index lifecycle already provided, and a hand-rolled secret rotation script. The result was a list in which only two of the nine entries were genuine capability gaps, one of which was the no-external-endpoint validation that later became a reusable block. The other seven became cookbook entries, and the cookbook was the higher-leverage fix, because those seven workarounds were being rebuilt at every bank-style engagement.
+
+**See also — the review mechanisms of the AWS Well-Architected Framework**, and the developer-portal and paved-path practice around Backstage (2020): most reported platform gaps turn out to be gaps in the path rather than gaps in the platform.
+
+**Watch out for.** Gaps listed from memory. Capability gaps that are documentation problems. One gap counted three times. No measurement of the workaround cost. Deliberate boundaries reported as oversights. A register where every item is urgent.
+
+**Done when.** The gap register exists with a category, the affected engagements, the workaround, a measured workaround cost, and a deliberate-boundary flag for each entry; systemic gaps are counted once; discoverability gaps have been separated out and are addressed in the cookbook; and each remaining gap has a destination and a rank by blocked population and block size.
+
+---
+
+#### G11. Share anonymized deployment learnings across the FDE team
+
+**Goal.** Move what one engineer learned to the other engineers before they repeat the discovery, without exposing a customer in the process.
+
+**How to do it.**
+
+1. **Share the learning, not the story.** "The insurer wanted X" becomes "in a regulated document-drafting deployment with human sign-off, expect Y" — the second is reusable and the first is not.
+2. **Anonymise completely, including the shape where the shape is identifying.** "A European B2B SaaS with twelve thousand tickets a day" identifies the customer to anyone who has been in the field; "a high-volume support deployment" does not.
+3. **Use the same entry format as the knowledge base:** situation, what was tried, what happened, what to do instead. Consistency is what makes a library findable, and a differently-shaped note is a note nobody will search for.
+4. **Publish the counter-cases.** A shared learning containing only successes teaches the team to over-trust the pattern, and the failure of the pattern is the lesson that protects the next engagement.
+5. **Prefer a short written note to a meeting.** Notes are searchable, versioned, and re-readable months later; meetings are attended by the people who already know the topic, which is exactly the wrong audience.
+6. **Make sharing a scheduled, owned activity** with a slot in the calendar and a named owner, or it happens for the loudest project and nobody else.
+7. **Have the anonymisation reviewed by someone outside the engagement.** The author is the worst judge of their own text, and a single identifying detail is enough.
+8. **Keep the customer-internal observations out of the shared library entirely.** An observation the customer expects to stay inside their environment is not yours to publish, however instructive it is.
+
+**Artifacts.** Sharing cadence with a named owner; anonymisation checklist and independent reviewer; standard learning entry (situation, tried, outcome, recommendation); cross-engagement pattern digest; counter-case log; link from each shared learning back to the library entry it came from.
+
+**Worked example — Corvid.** The learning worth sharing was not "Corvid had twelve thousand tickets a day" — that is the story, and the story is confidential and useless. The learning was the transferable finding that a cost ceiling of a few cents per request changes the whole routing strategy, because at that price the model call itself is a large share of the cost, and status-style queries that could be served from a macro store must never reach it. The entry was published without the customer's name, industry, or volume — only "a support-deflection deployment with a per-request cost ceiling" — and the counter-case was included: in a deployment without a cost ceiling, routing by cost was worth less than routing by quality, which is what a colleague had assumed and what the note corrected. That entry became one of the most consulted notes in the library, and it changed how two later engagements were scoped, at the point where scoping mattered most.
+
+**See also — the anonymised-learnings and pattern-sharing practice in the CNCF Cloud Native AI whitepaper** (2024–25), and the "write down what did not work" discipline in Google's "Rules of Machine Learning" (2019).
+
+**Watch out for.** Sharing the story instead of the learning. Identifying shapes. Successes only. Sharing in a meeting that the absent engineers never see. Anonymisation self-reviewed. Publishing something the customer expects to keep private.
+
+**Done when.** Shared learnings use the standard entry format, are anonymised and independently reviewed, include the counter-case, and link to the library entry they came from; the sharing cadence has a named owner and a published schedule; and no customer-identifying detail appears in any shared entry.
+
+---
+
+#### G12. Participate in product design reviews
+
+**Goal.** Bring field truth into the design of a feature before it is built, when the field can still change the design.
+
+**How to do it.**
+
+1. **Arrive with evidence, not impressions.** Two accounts' worth of real usage, a trace, a ticket, and a number is the difference between a comment and a correction.
+2. **Speak for the users you observed, including the ones the feature's persona does not describe.** A feature designed for a platform engineer is usually misused by a thirty-person legal team, and the design review is where that becomes visible.
+3. **Name the failure mode you are protecting against.** "The export can be run while an index is being rebuilt" is a design constraint; "it might cause problems" is not, and cannot be acted on.
+4. **Test the assumption of the feature against a real workflow.** Most design reviews would be improved by one question: which of your workflows does this feature make worse, and why would you still ship it?
+5. **Separate what you need from what you prefer.** The first is a requirement; the second is noise, and mixing the two costs the review its credibility with the people making the decision.
+6. **Raise the edges the team has not modelled** — offline, on-premises, low volume, no-ops, no-ops-readers, no-ops-billing. The customers with the fewest users are usually absent from the room, and they are where the hard constraints come from.
+7. **Bring the cost of the alternative.** If the product will not build the feature, the customer will work around it, and the workaround's cost is a design input rather than a negotiation.
+8. **Come back afterwards.** The most valuable follow-up is reporting how the shipped feature behaved in production, and that report is the only thing that makes the next design review better than this one.
+
+**Artifacts.** Design review input note (evidence, workflows affected, protected failure modes, edge cases, cost of the alternative); field evidence pack (traces, tickets, numbers); post-ship field report back to the design team; design review participation log; list of recurring design assumptions to check in every future review.
+
+**Worked example — St. Aldwyn Health.** The design review was for an auto-summary feature, and the field contribution that changed the design came from a near-miss. A physician had caught a summary that added a medication appearing in the discharge paperwork but not in the admission record, and the draft read as though the two were the same. That specific pattern — two source documents containing the same concept with different values, resolved silently in favour of one — was a failure mode the design team had not modelled, and it became a required field in the output schema plus a validation rule that flags the conflict. The second contribution was the edge case nobody had asked about: a 24/7 clinical service cannot have a maintenance window, so any design requiring an in-place index rebuild was a non-starter, which ruled out a proposed approach that was otherwise preferred. The follow-up afterwards — three months of near-miss reports from production, fed back into the design team — is what turned a one-off review into a standing practice.
+
+**See also — Anthropic's "Building Effective Agents"** (2024) on matching workflow complexity to what a model is actually good at, and the context-engineering practice of designing for the real task rather than the idealised one.
+
+**Watch out for.** Opinions without evidence. Speaking only for the loudest account. Vague objections. Requirements mixed with preferences. Only the largest customers represented. Never returning after the release.
+
+**Done when.** Every design review the FDE joins is preceded by a written input note with evidence, affected workflows, protected failure modes, edge cases, and the cost of the alternative; a field evidence pack is attached; and a post-ship field report goes back to the design team after release.
+
+---
+
+#### Documented Cases Referenced
+
+Publicly reported cases used throughout Pillar G, cited for the decision pattern each illustrates.
+
+| Case | Year | Point it supports | Used in |
+|------|------|-------------------|---------|
+| **MT-Bench / LLM-as-a-Judge** (Zheng et al., NeurIPS) — a judge is a usable instrument only once its agreement with humans has been measured | 2023 | A judge is a measurement device and needs calibrating like one | G5 |
+| **Judge fairness research** (Wang et al.) — documented position, verbosity, and self-enhancement biases in LLM judges | 2024 | Agreement rates must be characterised by failure type, not just quoted | G5 |
+| **Datasheets for Datasets** (Gebru et al.) — every dataset ships with documentation of composition, collection process, intended use, and limits | 2021 | A permissioned production-derived set needs a dataset card before it needs a release | G4 |
+| **Model collapse on recursively generated data** (Shumailov et al., Nature) — models trained on recursively generated data degrade | 2024 | The held-out half of a production-derived set must stay human-authored and quarantined | G4 |
+| **METR time-horizon evaluations** — measuring how long a system works reliably before failing, rather than single-shot success | 2025 | Reliability under sustained load is the property worth measuring in a new model version | G7 |
+| **SWE-bench Verified** — a human-validated benchmark, and the reminder that "resolved" and "correct" are different claims | 2024 | A leaderboard position is not a workload verdict | G7 |
+| **Model and system cards** (Google, Anthropic, and others) — known limitations published as reproducible tasks with stated boundaries | 2023–25 | A field weakness report should have the shape of a documented limitation | G3 |
+| **NIST AI RMF** and **NIST AI 600-1 Generative AI Profile** — govern, map, measure, manage; the reference for structured measurement and evidence | 2023, 2024 | Field data collection is a measurement activity and needs a defined structure | G1, G4 |
+| **SEC Rule 17a-4 and FINRA Rule 4511** — electronic recordkeeping, retention, and audit-trail requirements for regulated firms | 2002, updated onward | A defensible audit trail is a regulatory artefact, and it is a recurring field pattern | G8, G9 |
+| **"Rules of Machine Learning"** (Google) — instrument first, document what did not work, ship and iterate | 2013, updated 2019 | Write down the failures, or the same experiment gets repeated | G1, G11 |
+| **AWS Well-Architected Framework** — review mechanisms, the cost pillar, and the practice of evaluating a design against published questions | 2018–24 | A gap analysis is a review against questions, not an opinion | G8, G10 |
+| **CNCF Cloud Native AI whitepaper** — shared platform components, pattern libraries, and the agentic-AI operational model | 2024–25 | Shared patterns are what turn individual deployments into a platform | G8, G11 |
+| **Backstage** (Spotify) — the software catalog and the paved path from a template to a running service | 2020 | Most reported platform gaps are gaps in the path, not in the platform | G9, G10 |
+| **DORA / Accelerate** (Forsgren, Humble, Kim) — outcome-oriented improvement, feedback loops, and the primacy of user-centric measures | 2018 | A roadmap input should be a measured outcome, not a delivered feature | G6, G9 |
+| **"Building Effective Agents"** (Anthropic) — match workflow complexity to what the model is actually good at; simple patterns first | 2024 | Field evidence about real workflows is what keeps a design honest | G12, G3 |
 
 </details>
 
