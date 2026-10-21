@@ -299,3 +299,4 @@ Phase 6 does not end. It is the operating mode. "Completion" means the following
 - Previous: [Phase 5 — Go-Live & Handoff](05-go-live-and-handoff.md)
 - Loop back to: [Phase 0 — Discovery & Scoping](00-discovery-and-scoping.md) — new requirements start the cycle again
 - Source reference: [FDE-Responsibilities.md — Pillars E, F, and G](../FDE-Responsibilities.md) and [§11 Personal Reflection / Customization](../FDE-Responsibilities.md)
+- **Deeper dive:** [FDE-Responsibilities.md Pillar E](../FDE-Responsibilities.md) expands the 20 production-operations tasks as step-by-step procedures with templates, the same five worked business cases (Northwind Mutual, Meridian Bank, Corvid, St. Aldwyn Health, Halden & Rowe), and thirteen publicly documented reference cases.

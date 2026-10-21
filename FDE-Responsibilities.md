@@ -1,6 +1,6 @@
 # Forward Deployed Engineer (FDE) — AI Implementation Responsibilities Reference
 
-**Version:** 2.4
+**Version:** 2.5
 **Last Updated:** 2026-10-21
 **Tags:** #forward-deployed-engineer #AI #LLM #RAG #deployment #FDE #career-reference
 
@@ -51,7 +51,7 @@ The role decomposes into seven pillars:
 
 #### Case Index
 
-Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), and Pillar D (evaluation), with their infrastructure, model, and evaluation shapes fixed there.
+Five composite business cases are used throughout this section. Each is invented but grounded in a real engagement shape; the numbers stay consistent across every task they appear in, so you can trace one engagement end to end. The same five cases recur in Pillar B (infrastructure), Pillar C (inference stack), Pillar D (evaluation), and Pillar E (production operations), with their infrastructure, model, evaluation, and operational shapes fixed there.
 
 | # | Case | Sector & Scale | The Ask | Hard Constraint | Instructive Because |
 |---|------|----------------|---------|-----------------|--------------------|
@@ -2124,8 +2124,22 @@ Publicly reported cases used throughout Pillar D, cited for the decision pattern
 
 ### Pillar E: Production Monitoring, Debugging & Optimization
 
+> **Phase playbook:** [AI-SDLC Phase 6 — Production Optimization](AI-SDLC/06-production-optimization.md) covers this ground as a gated phase with monitoring checklists, incident playbooks, and an optimization backlog. This section is the *how* — procedures, templates, and worked cases.
+
 <details>
-<summary><b>20 core tasks</b> (click to expand)</summary>
+<summary><b>20 core tasks — detailed breakdown</b> (click to expand)</summary>
+
+#### Case Index
+
+The same five cases carry into production operations, with their operational shape fixed here. Read this table before designing the monitoring estate.
+
+| # | Case | Operational Shape | Scale | Binding Constraint | Teaches |
+|---|------|-------------------|-------|--------------------|---------|
+| **1** | **Northwind Mutual** | Vendor-managed, business hours, regulated decisions with human sign-off | ~110 claims/day; override rate 11% → 6%; monthly manual re-issue | Medical PII; state rules change monthly; auditable decisions | Trace first, then code; a per-case diff beats an average score |
+| **2** | **Meridian Bank** | Runs inside the bank's environment; telemetry may not leave the building | 4.2M chunks; nightly re-embed; 200-file KYC sample | SEC/FINRA; no external telemetry vendors; customer-run platform | Observability must fit the customer's environment, not ours |
+| **3** | **Corvid** | Vendor carries the pager; no customer ops staff; strict cost ceiling | 12k tickets/day, 8x peaks, $0.04/request | 4s ceiling; EU residency; business-hours support with an escalation path | The customer judges you by cost per successful outcome, not uptime |
+| **4** | **St. Aldwyn Health** | Air-gapped site; heartbeat-based monitoring; batch window discipline | ~60 summaries/day; 8–12 week GPU lead time; 24/7 clinical availability | PHI never leaves the network; clinician review is the ceiling | The failure to detect is "the site went quiet"; capacity is a decision date |
+| **5** | **Halden & Rowe** | Single CPU workstation; no ops staff; remote-only support | ~40 requests/day; per-matter index namespaces | Privilege; no external API; the firm's IT contact is the only operator | Remote support is a designed service, not an absence of one |
 
 - [ ] Implement observability stack: LLM tracing (LangSmith, Langfuse, Arize, Phoenix), metrics, logging, distributed tracing
 - [ ] Instrument RAG pipelines: track retrieval quality, chunk relevance, embedding drift, retrieval latency per query
@@ -2147,6 +2161,536 @@ Publicly reported cases used throughout Pillar D, cited for the decision pattern
 - [ ] Document and fix recurring issues: file bugs, create workarounds, contribute patches, update runbooks
 - [ ] Manage capacity planning: GPU utilization, storage growth, vector DB scaling, traffic forecasting
 - [ ] Provide remote support between on-site visits: async debugging, scheduled check-ins, emergency escalation paths
+
+---
+
+#### E1. Implement the observability stack
+
+**Goal.** One correlated trace per request — from the user's question to the retrieved chunk, the tool call, the prompt, the model, the tokens, and the latency — readable at 2am.
+
+**How to do it.**
+
+1. **Trace the whole request as one correlated ID:** user request → retrieval → prompt assembly → model call → tool calls → response → business outcome. A trace that stops at the model call leaves the most interesting half unobserved.
+2. **Use standard span conventions** (OpenTelemetry GenAI semantic conventions, OpenInference) so traces stay portable and you are not locked into one vendor's schema.
+3. **Record the model input and output** — retrieved chunks, the final prompt, tool arguments, and the raw response. "Why did it say that" is unanswerable without them.
+4. **Record the operational facts alongside:** model and prompt version, token counts by type, cached tokens, per-stage latency, retrieval candidates and scores, and the cost.
+5. **Redact at capture time, not at query time,** and check the tracing vendor's retention terms as part of the decision. A trace store full of medical PII is a liability with a query interface.
+6. **Keep the tracing path cheap:** full capture on errors, low-confidence cases, and flagged runs; sampled capture for the rest. Tracing everything costs money and buries the interesting cases.
+7. **Ship one trace store the whole team can query,** with retention aligned to the audit requirement.
+8. **Instrument before you need it.** Tracing added during an incident is tracing that is missing exactly the fields you needed.
+
+**Artifacts.** Trace schema and span conventions; correlation ID propagation; redaction rules and tests; sampling policy; trace store with residency and retention; per-stage latency instrumentation.
+
+**Worked example — Meridian Bank.** The entire observability stack ran inside the bank's environment: an OpenTelemetry collector receiving spans from the bank-hosted services, writing to the bank's own trace store, with no external SaaS in the path, because outbound telemetry containing KYC data was not permitted. The consequence was a real engineering burden — the vendor team could not query traces directly, so a weekly trace extract with explicit query parameters was shipped into the shared engagement repository through an agreed redaction script, and that script became a tested artefact, because it sat on the path between customer data and the vendor's screen.
+
+**See also — OpenTelemetry's GenAI semantic conventions and Arize's OpenInference** (2024–25) are the two open conventions worth adopting rather than inventing; the practical value is that a trace exported from one vendor's stack can be read in another's, which is what keeps a vendor change from becoming a migration.
+
+**Watch out for.** Tracing that stops at the model call. A single-vendor schema with no portability. Sampling away the error cases. PII in the trace store. Adding tracing after an incident starts. Redaction applied only in the dashboard.
+
+**Done when.** Every request has one correlated trace spanning retrieval, prompt, model, tools, and outcome; redaction is tested; the sampling policy preserves the failures; and the trace store's residency and retention match the engagement's constraints.
+
+---
+
+#### E2. Instrument RAG pipelines
+
+**Goal.** See retrieval quality per query — an end-to-end answer score tells you nothing about which stage broke.
+
+**How to do it.**
+
+1. **Instrument the four stages separately:** candidate generation (recall@k before reranking), reranking (how many candidates the reranker demoted), filtering (how many were removed and why), and context assembly (how many chunks actually reached the prompt).
+2. **Log the retrieved chunk IDs and scores with every request, and the ID of the chunk the answer cited.** The gap between "retrieved" and "cited" is where most quality loss hides.
+3. **Measure retrieval latency per stage** — vector search, metadata filter, reranking — because a slow reranker looks like a slow model.
+4. **Track embedding drift:** the age of each embedding, the index build version, and the embedding model version on every record. A mixed index degrades silently and gives no error.
+5. **Track corpus movement:** documents added, edited, deleted, and stale. A stale document is worse than a missing one, because it is confidently wrong.
+6. **Sample for quality daily** — run a small labelled set of live queries through retrieval and measure recall@k against known-good chunk IDs.
+7. **Watch the popular-chunk effect.** The same ten chunks answering most queries is a coverage problem no average recall metric will reveal.
+
+**Artifacts.** Per-stage retrieval metrics; retrieved-versus-cited logging; embedding version and age tracking; corpus change log; daily sampled retrieval check; chunk coverage and popularity report.
+
+**Worked example — Northwind Mutual.** The claims manual is re-issued monthly, so the manual version was a first-class field on every chunk, and a daily job compared the live manual against the indexed version. When a mid-month amendment to the notification-deadline provision was issued, the index still carried the superseded clause and the retrieval logs showed the old chunk cited with high similarity — a retrieval failure that the end-to-end answer metric missed, because the answer was fluent and confidently wrong. The fix was a freshness check comparing effective dates between the source system and the index before serving.
+
+**Watch out for.** Measuring only the final answer score. Logging retrieved chunks without logging which were cited. Missing that reranking latency is often the dominant retrieval cost. Mixing embedding versions in one index. Comparing similarity scores produced by different embedding models.
+
+**Done when.** Every request logs candidates, reranked results, and cited chunks; embedding versions are tracked per record; corpus freshness is checked automatically; and retrieval recall is measured daily on a labelled sample.
+
+---
+
+#### E3. Instrument agent workflows
+
+**Goal.** Reconstruct any agent run step by step — where it went wrong, what it cost, and whether the human overrode it.
+
+**How to do it.**
+
+1. **Trace every step:** input, plan, tool arguments, tool result, tokens, latency. A trace that records only the final output cannot explain a loop.
+2. **Record tool outcomes as first-class events** — success, error, timeout, malformed output, refusal — each with the payload shape that caused it.
+3. **Attribute tokens and cost per step,** so the expensive step is visible rather than inferred.
+4. **Record the termination reason for every run:** completed, budget exhausted, deadline reached, loop detected, tool failure. A high rate of budget exhaustion is a workflow bug, not a capacity problem.
+5. **Capture the human interaction:** the override, the acceptance, the escalation, and the elapsed time between the agent's output and the human's decision. Override rate is the most honest quality metric an agent has.
+6. **Redact at capture.** Tool arguments and results hold the most sensitive data in the system, and an agent trace is the highest-risk artefact you produce.
+7. **Sample by outcome:** full traces for overrides, failures, and high-value runs; sampled traces for the rest.
+8. **Make traces replayable** — store enough state to re-execute a failing run with the same inputs, which is what turns a bug from anecdotal into reproducible.
+
+**Artifacts.** Step-level span schema; tool outcome taxonomy; per-step token and cost attribution; termination reason tracking; override and escalation metrics; trace replay mechanism; capture-time redaction policy.
+
+**Worked example — Northwind Mutual.** Step traces turned a vague complaint — "the AI misses claims" — into three separable numbers: tool failure rate at 3.1% (tool calls returning an error shape the agent misread), budget-exhaustion termination at 0.8%, and adjuster override rate falling from 11% to 6% as retrieval improved. Only the third was a model-quality problem; the first was an error-contract issue that a "the model is not good enough" reading of the complaint would have missed entirely, and the fix — a typed tool error shape — cost two days rather than a retraining cycle.
+
+**Watch out for.** Tracing only the final output. Not recording termination reasons. Ignoring the human override signal. Storing tool arguments and results unredacted. Traces that cannot be replayed. Measuring agent success only by task completion.
+
+**Done when.** Every run has a step-level trace with a termination reason and a cost, overrides are tracked as a first-class metric, and any failing run can be replayed from its trace.
+
+---
+
+#### E4. Build dashboards
+
+**Goal.** Three dashboards, three audiences, one set of numbers underneath.
+
+**How to do it.**
+
+1. **Build for three readers:** executive (availability, latency, cost, and the business outcome), operator (queues, saturation, errors, fallbacks, cold starts), and AI quality (retrieval, citations, overrides, abstentions, feedback). One dashboard for all three guarantees nobody reads it.
+2. **Lead with the business metric and its baseline** — "cost per successful ticket against $0.04, deflection against the 40% target" — because that is the question the decision-maker is actually asking.
+3. **Keep the definitions identical to the SLOs (D17) and the alerts (E5).** One number, one definition, one place.
+4. **Show slices:** by tenant, by case type, by state, by matter. An overall number hides the one customer who is failing.
+5. **Put trend and comparison on every panel** — this week against last week, and against the baseline. A point reading is a curiosity; a trend is a signal.
+6. **Make every panel actionable:** link each to the trace query that produced it, so the path from a red panel to a broken request is one click.
+7. **Time-box the build.** It is an instrument, not a deliverable, and an instrument that takes three weeks to build is out of date on day one of production.
+
+**Artifacts.** Dashboard set per audience; metric definition source of truth; slice views; baseline overlays; trace drill-down links; refresh and maintenance cadence.
+
+**Worked example — Corvid.** The dashboard that carried the business case was cost per successful ticket, with deflection and reopen rate beside it. The executive view deliberately excluded p95 latency, because the 4-second ceiling was already governed by the SLO and the on-call view, and the executive question was always whether this was saving money without hurting customers. The technical panel underneath shared the same metric definitions, which removed the recurring problem of two teams quoting two different numbers for the same thing.
+
+**Watch out for.** One dashboard for every audience. A dashboard with no baseline. Technical metrics where the business metric belongs. Numbers that disagree with the alerting rules. Panels nobody can drill from to a trace. More dashboards than the team maintains.
+
+**Done when.** Three dashboards exist for three audiences, share one definition source, show slices and baselines, and link from each panel to the traces behind it.
+
+---
+
+#### E5. Configure alerting
+
+**Goal.** Be told about the problems a user would notice, early enough to act — and not about everything else.
+
+**How to do it.**
+
+1. **Alert on symptoms a user feels,** and derive each alert from a written SLO rather than from a threshold someone discovered during an incident.
+2. **Use multi-window, multi-burn-rate alerting** for availability and latency, so a fast burn pages and a slow burn tickets.
+3. **Add the quality alerts a technical stack cannot see:** a drop in citation rate, a rise in abstentions, a fall in override acceptance, a spike in reopen rate. These catch silent quality regressions.
+4. **Add the cost alerts:** burn rate against the daily budget, cost per successful outcome against its ceiling, and a per-tenant anomaly.
+5. **Add the data alerts:** ingestion failures, stale documents, index build failures, embedding version mismatches.
+6. **Route by severity and by hour** — not everything pages at 3am — and route clinical, financial, and security alerts to different rotas than the rest.
+7. **Test every alert by firing it,** and check that it reaches a human and that the message says what to do first.
+8. **Review the alert set after every incident and prune what fired without action.** An alert nobody acts on is noise that trains the team to ignore the channel.
+
+**Artifacts.** Alert catalogue with severity and owner; burn-rate configuration; quality, cost, and data alerts; routing matrix by rota and severity; alert test results; post-incident alert review log.
+
+**Worked example — St. Aldwyn Health.** Alerting had to work on an air-gapped hospital network, so the design was heartbeat-based rather than push-based: each site sent a periodic heartbeat when the link was up, and the central monitor treated a missed heartbeat as an alert condition — the only way to detect a failure when the failure *is* that the network is down. A second alert class watched for the ED site falling back to local inference, because an ED site silently running degraded for a week would have been invisible in every other metric.
+
+**See also — the AWS Builders' Library** (2019) is the reference for load shedding and queue discipline: the pattern is that overload must be turned away explicitly at the edge, because an unbounded queue converts a spike into a latency collapse for every request at once.
+
+**Watch out for.** Alerting on causes such as GPU temperature rather than symptoms such as latency. No quality alerts, so silent regressions pass. Everything paging at 3am. Alerts never fired in a test. Never pruning after an incident. Alerts with thresholds but no defined action.
+
+**Done when.** Every alert maps to a user-visible symptom, has a severity, an owner, a routing target, and a tested delivery path, and the set is pruned after each incident.
+
+---
+
+#### E6. Debug production issues
+
+**Goal.** Move from "it is wrong" to a specific broken step, with evidence, in under an hour.
+
+**How to do it.**
+
+1. **Start from the trace, not from the code.** The failing request already contains the retrieved chunks, the prompt, the tool calls, and the response.
+2. **Reproduce first** — turn the failing trace into a repeatable case in the eval harness before changing anything. A fix without a reproduction is a guess.
+3. **Localise by stage:** retrieval (were the right chunks there?), prompt (was the instruction right?), generation (did the model follow it?), tools (did the call succeed?), application (was the output parsed and routed?). Each stage has a different owner.
+4. **Check the boring explanations before the interesting ones:** expired credentials, a rotated certificate, a changed dependency version, a moved threshold, a data change, an upstream schema drift.
+5. **Check version alignment everywhere** — prompt, model, embedding, chunker, guardrail, and corpus snapshot. Mismatched versions are the most common root cause.
+6. **Add the failing case to the regression set the moment it is fixed,** and record the incident in the runbook.
+7. **Separate the incident from the bug:** a bad answer may be a data problem, a configuration change, or a genuine defect, and the fix differs in each case.
+8. **Beware the disappearing symptom.** Verify the cause, not merely the absence of the symptom — a change that hides the problem without explaining it will return.
+
+**Artifacts.** Trace-based debug workflow; reproduction-case template; stage localisation checklist; version-alignment check; incident-to-regression pipeline; post-incident runbook entry.
+
+**Worked example — Northwind Mutual.** A claim came back with a coverage determination citing a clause superseded two weeks earlier. The trace showed retrieval had returned the correct current clause — retrieved, ranked second, then dropped by the top-k cut — while the model cited a clause it had apparently found elsewhere in the prompt. The reproduction case went into the regression set, the fix was a two-line change to the reranking threshold plus an effective-date filter, and the root cause was recorded as a pipeline configuration change with no corresponding re-evaluation — which is exactly what E7 exists to catch.
+
+**Watch out for.** Debugging by reading application logs when a trace exists. Changing code before reproducing. Fixing symptoms. Not checking version alignment. Not adding the case to the regression set. Treating every bad answer as a model failure.
+
+**Done when.** Every production issue is reproduced from a trace, localised to a stage, fixed at the cause, and added to the regression set with a runbook entry.
+
+---
+
+#### E7. Perform root cause analysis on quality degradation
+
+**Goal.** Distinguish the four causes — corpus, configuration, embedding, and model — and fix the right one.
+
+**How to do it.**
+
+1. **Establish that it degraded:** a measured drop on a stable metric, over a comparable segment, not a noisy reading.
+2. **Segment the drop:** which requests, which tenants, which slices, which window? A global drop and a slice-specific drop have different causes.
+3. **Test the four hypotheses in order of cheapness:** corpus change (documents added, edited, deleted, or re-issued), configuration change (prompt, top-k, threshold, chunker, guardrail), embedding mismatch (a mixed index or a changed embedding model), model change (a new version, or a provider-side behaviour change).
+4. **Use the golden set as the detector.** Re-run the unchanged golden set: if it still passes, the regression is in the data or in an untested surface; if it fails, you have a reproducible regression with a version to bisect.
+5. **Bisect the versions** — prompt, model, chunker, embedding, corpus snapshot. The regression is in the difference between the last good run and now.
+6. **Check for silent upstream changes** — provider model updates, dependency releases, and infrastructure configuration drift. None of them appear in your own deploy log.
+7. **Write the analysis as a timeline with contributing factors,** not a single sentence. Multi-cause regressions are the norm, and "we changed three things last Tuesday" is the usual truth.
+8. **Re-run the golden set and the sampled live set before closing,** and only then update the baseline.
+
+**Artifacts.** Degradation detection evidence; segment analysis; hypothesis test log; bisect record; timeline with contributing factors; golden-set and sampled-set re-verification before closure.
+
+**Worked example — Meridian Bank.** A 6-point drop in extraction faithfulness on the KYC pipeline was traced by bisecting pipeline versions rather than by reading logs. The corpus was unchanged, the prompt was unchanged, and the embedding version had not changed. The culprit was a dependency update that altered how PDF tables were parsed during ingestion, changing chunk boundaries for one document layout and quietly reducing the citation rate. The corrective action was to pin the parser version, add a parser fingerprint to the index build metadata, and add a parser-version check to the deployment gate.
+
+**Watch out for.** Treating a noisy reading as a degradation. Debugging the model when the corpus changed. Changing several things and losing the ability to attribute. Missing provider-side or dependency-side changes because they are not in your deploy log. Closing without re-running the golden set.
+
+**Done when.** Every degradation is attributed to a specific cause with a bisect record, the fix is verified against the golden set and the live sample, and the baseline is only moved after verification.
+
+---
+
+#### E8. Optimize latency
+
+**Goal.** Cut the time to a useful answer, measured at the user, without cutting the content that makes it correct.
+
+**How to do it.**
+
+1. **Decompose the latency before optimising:** retrieval, reranking, prompt assembly, queueing, time to first token, generation. Attacking the largest term first beats improving all of them slightly.
+2. **Attack retrieval:** index tuning, query rewriting, metadata filters that shrink the candidate set before search, and caching the retrieval step for repeated queries.
+3. **Attack reranking:** reduce the candidate count, use a smaller reranker, or skip reranking for low-risk query classes — and measure exactly what skipping costs in quality.
+4. **Attack the prompt:** remove redundant instructions, move stable content into a cached prefix, and trim retrieved context the answer does not use.
+5. **Attack generation:** route simple classes to a smaller model, cap output length, and stream so perceived latency improves even when total latency does not.
+6. **Attack the queue:** concurrency limits, admission control, and load shedding at the edge, so overload produces a fast failure rather than a slow success for everyone.
+7. **Watch the trade-off explicitly.** Every latency optimisation that removes context or a reranking step moves quality — measure both on every change and record the trade.
+8. **Re-test under load after optimising.** The fastest configuration is often the one that falls over at peak.
+
+**Artifacts.** Latency decomposition per stage; optimisation backlog with measured deltas; context-trimming analysis; concurrency and admission-control configuration; quality impact per optimisation; load re-test results.
+
+**Worked example — Corvid.** The 4-second ceiling was attacked by decomposition, and the surprise was that generation was not the largest term — reranking over 40 candidates on every request was, adding 900ms to p95. The fix was two-tier: a cheap first-pass retrieval, reranking only when the top score fell below a threshold, and reranking a smaller candidate set otherwise. p95 fell to 2.1 seconds with no measurable quality change on the held-out set, because the requests that needed reranking were exactly the ones worth paying for.
+
+**Watch out for.** Optimising the model when the queue is the bottleneck. Removing context to hit a latency number and losing accuracy. Optimising a synthetic benchmark. Not re-testing under load. Improving total latency while making the user wait longer for the first token.
+
+**Done when.** Latency is decomposed per stage, each optimisation carries a measured delta in both latency and quality, and the result survives a load test at peak.
+
+---
+
+#### E9. Optimize cost
+
+**Goal.** Lower the cost of a successful outcome with the levers you have, measured against the outcome metric.
+
+**How to do it.**
+
+1. **Re-run the cost decomposition monthly (D9)** rather than reusing the launch analysis — traffic mixes drift and prices change.
+2. **Work the levers in cost-to-implement order:** prompt caching and prefix reuse, response and semantic caching, routing simple classes to smaller models, context trimming, batching, then quantisation.
+3. **Use provider batch processing for anything non-interactive** — a reported ~50% discount for asynchronous workloads is free money for the nightly jobs.
+4. **Raise cache hit rate by normalising equivalent requests** before you add cache nodes.
+5. **Count the cost of your own quality machinery.** LLM judges, guardrails, rerankers, and embedding calls are all model usage, and on a high-volume system they can rival generation cost.
+6. **Look for waste before discounts:** duplicate retrievals, retries that eventually succeed after several failures, oversized contexts, and per-request sampling that should be a percentage.
+7. **Quantise and shrink the embedding path** — usually the second-largest line and the easiest to change.
+8. **Re-check the ceiling and publish the new figure per outcome,** so the saving is a number the business can act on rather than a percentage on a slide.
+
+**Artifacts.** Monthly cost decomposition; optimisation backlog with realised savings; cache hit-rate and hit-value trend; batch-processing adoption; quality-machinery cost line; updated cost-per-outcome figure.
+
+**Worked example — Meridian Bank.** The on-prem bill was dominated by two items the launch analysis had missed: a nightly re-embed that re-embedded the entire 4.2M-chunk corpus weekly instead of incrementally, and guardrail classifiers running on every request when the input schema already excluded PII in 90% of cases. Incremental re-embedding cut the weekly job to the ~4% of chunks that had actually changed, and moving the PII check from the classifier to the schema where it was deterministic removed the second line entirely. Together these cut monthly cost by 38% with no measurable quality change.
+
+**Watch out for.** Reusing a stale cost analysis. Optimising the number of requests rather than the cost of outcomes. Counting only generation cost and ignoring evaluation and guardrail traffic. Caching without tenant or permission scoping in the key. Assuming a discount applies to your workload's latency class.
+
+**Done when.** Cost per outcome is decomposed monthly, savings are measured against the outcome metric with quality held constant, and the quality machinery's own cost is visible as its own line.
+
+---
+
+#### E10. Optimize quality
+
+**Goal.** Improve the score that matters, with a change you can attribute and a regression test to prove it.
+
+**How to do it.**
+
+1. **Order the levers by evidence:** retrieval first, then prompt, then generation, then reranking. Quality is usually downstream of retrieval.
+2. **Change one thing at a time** and evaluate on the dev set. Two simultaneous changes produce a result you cannot attribute.
+3. **Tune retrieval with measurements:** top-k, score thresholds, hybrid weights, and metadata filters — each a knob with a curve, not a preference.
+4. **Improve the reranker rather than the retriever** when precision@1 is the failure; reranking is usually the cheapest large gain.
+5. **Improve prompts surgically:** add the instruction that was missing, remove the one that was contradicting, and prefer explicit output contracts over adjectives. Keep every prompt versioned.
+6. **Use few-shot examples deliberately:** cover the failure you are fixing and the boundary case, keep them short, and remove any that duplicate the instructions.
+7. **Route the hard cases rather than upgrading the model everywhere.**
+8. **Confirm on the held-out set before shipping,** and check the cost and guardrail impact at the same time.
+
+**Artifacts.** Quality improvement log with before and after per change; retrieval knob curves; prompt version history; few-shot example set with rationale; held-out verification; cost and guardrail impact per change.
+
+**Worked example — Halden & Rowe.** The clause-flagging quality problem was that junior lawyers received flags with no precedent reference, so they spent longer checking a flag than they would have spent reading the clause. The improvement was not a better model but a better output contract: every flag now carries the precedent section it matched, so the lawyer's work changed from verifying a flag to accepting a flag with a citation, and first-pass review time fell by roughly a third. It was a prompt and schema change, evaluated against a partner-labelled set, and it shipped with a regression case asserting the precedent reference was present.
+
+**Watch out for.** Changing several things at once. Tuning the prompt when retrieval is the failure. Accepting quality gains without a cost check. Skipping the held-out set. Few-shot examples that grow the prompt until latency and cost suffer.
+
+**Done when.** Every quality change is a single attributable change verified on the held-out set, with its cost and guardrail impact recorded and a regression case in place.
+
+---
+
+#### E11. Implement feedback loops
+
+**Goal.** Turn user behaviour into a prioritised, curated signal — not a wall of unstructured comments.
+
+**How to do it.**
+
+1. **Instrument explicit feedback** (thumbs, ratings, "was this helpful") but never rely on it alone: the people who rate are a biased subset, and the people with the worst experience are the least likely to click.
+2. **Capture corrections as data.** When a user edits the output, the diff between the output and the edit is the most valuable training and evaluation signal you will collect.
+3. **Mine implicit signals:** edit rate, regeneration rate, copy-and-rewrite, task abandonment, and reopen rate. Each is a proxy for dissatisfaction that does not depend on anyone clicking a button.
+4. **Attach every signal to a slice.** "Users are unhappy" is not actionable; "unsatisfied with refund-status questions on mobile" is.
+5. **Curate before you use:** sample the feedback, label it, and check label agreement. Raw feedback used directly becomes noise, and the classic outcome is optimising toward what the angriest users said.
+6. **Close the loop visibly** — show users that their feedback changed something. Feedback loops die when submitting feedback feels pointless.
+7. **Route feedback into the three places it belongs:** the golden set (regression cases), the product backlog (feature and UX issues), and the model backlog (retrieval and prompt work).
+8. **Watch for the perverse incentive:** optimising for the metric users rate rather than for the outcome the business wants.
+
+**Artifacts.** Feedback capture design; implicit-signal definitions; slice attribution; curation and labelling process with agreement checks; feedback-to-backlog routing rules; feedback volume and satisfaction trends.
+
+**Worked example — Corvid.** The strongest signal was not thumbs up or down — it was the edit rate on drafted replies, because agents rewrote the assistant's text before sending. The team measured edit *distance*, not merely the presence of an edit, and found ticket classes with more than 60% of replies edited were concentrated in two categories: refund-status questions and account-limit questions — the same categories where the system was false-refusing (D7). One metric, one number, pointing straight at the largest quality defect in the system.
+
+**See also — RLHF** (Christiano et al., 2017) established the pattern that is still the correct one: human preference is the signal, and the discipline that makes it useful is curation — a small, labelled, agreed sample beats a large unlabelled one.
+
+**Watch out for.** Relying on explicit ratings alone. Treating raw feedback as data without curation. Feedback with no slice attribution. Optimising the rated metric rather than the business outcome. Collecting feedback with no route into a backlog.
+
+**Done when.** Explicit and implicit signals are captured with slice attribution, curated and labelled with agreement checked, and routed into the golden set, the product backlog, and the model backlog.
+
+---
+
+#### E12. Monitor data quality
+
+**Goal.** Know that the corpus is current, complete, and consistently processed — before retrieval quality starts to drift.
+
+**How to do it.**
+
+1. **Monitor ingestion as a production system:** success and failure rate, latency, documents processed per run, and the delta against the count expected from the source.
+2. **Track freshness per source against an SLA:** how old is the newest document in the index, and how old is the oldest document that should have been superseded. Stale is worse than missing.
+3. **Check index integrity:** document count, chunk count, orphaned chunks, duplicate chunks, chunks referencing deleted documents, and the chunk-length distribution.
+4. **Detect embedding pipeline issues:** batch failures, unusual latency, a chunk count that moved without a corresponding source change, and records whose embedding version differs from the index version.
+5. **Monitor coverage:** which parts of the corpus are never retrieved? An unretrieved chunk is either a chunk nobody needed or a chunk that should have been findable and was not.
+6. **Track supersession explicitly:** when a document version is replaced, the old version's chunks must be removed, and a removal failure produces confident wrong answers.
+7. **Watch the parser, not just the source.** A parser change alters chunk boundaries silently — fingerprint the parser version in the index metadata and compare it against the running version.
+8. **Make freshness and integrity checks part of the deployment gate,** so a bad ingestion run cannot be promoted.
+
+**Artifacts.** Ingestion health metrics; per-source freshness SLA; index integrity report; embedding pipeline checks; coverage analysis; supersession handling; parser fingerprint check; deployment-gate integration.
+
+**Worked example — Northwind Mutual.** The claims manual is re-issued monthly, so the index carried a "manual version" field on every chunk and a daily job compared the live manual's effective dates against the indexed ones. That check caught a mid-month amendment the supplier had issued outside the normal cycle: the superseded notification-deadline clause was still in the index and was being cited with high similarity, because nothing in the retrieval path knew the clause had been replaced. The daily freshness check was the only control that found it; the answer-quality metric never moved.
+
+**Watch out for.** Monitoring ingestion success but not freshness. Assuming document deletion propagates. Missing the parser change. Treating ingestion as a batch job nobody owns. Checking index counts but not chunk coverage or supersession.
+
+**Done when.** Ingestion health, per-source freshness, index integrity, coverage, and supersession are all monitored, and freshness and integrity checks gate every deployment.
+
+---
+
+#### E13. Handle model version updates
+
+**Goal.** Adopt new model versions deliberately, treating an upgrade as a change to a versioned system rather than as a settings toggle.
+
+**How to do it.**
+
+1. **Pin model versions everywhere,** including in provider configuration. Never use a floating alias in production.
+2. **Re-run the golden set against the candidate before anything else,** and diff the results per case — the interesting output is the set of cases that changed, not the average score.
+3. **Judge the change against the SLOs, not against a benchmark:** latency, cost per outcome, refusal rate, format compliance, and guardrail behaviour all shift with a version.
+4. **Check the behavioural changes benchmarks miss:** verbosity, refusal thresholds, formatting, and the handling of the edge cases your business actually runs on.
+5. **Roll out with the same machinery you use for your own releases** — shadow, canary, ramp, automated rollback triggers.
+6. **Plan the migration:** dual-serving, prompt re-tuning if behaviour shifted, and the capacity change if token counts moved.
+7. **Record the decision with the evidence, including the decision *not* to upgrade,** so the next upgrade starts from a record rather than from memory.
+8. **Watch for provider-side changes with no announcement** — versions that behave differently without a version bump, deprecated models, and silent parameter changes.
+
+**Artifacts.** Pinned-version policy; upgrade evaluation report with per-case diff; SLO impact analysis; canary plan per upgrade; migration and rollback plan; upgrade decision record; deprecation watchlist.
+
+**Worked example — Northwind Mutual.** The insurer's model was self-hosted and version-pinned, and the upgrade procedure was the same code path used for prompt changes: the candidate revision ran against the 500-case golden set, the per-case diff was reviewed by the claims supervisor for the 23 cases that changed, and only after sign-off did the revision move to the shadow environment and then a 10% canary. Two of the 23 changed cases turned out to be regressions in refusal behaviour — the new revision answered questions the old one correctly declined — exactly the kind of change an average-score comparison hides.
+
+**Watch out for.** Floating model aliases in production. Judging an upgrade on an aggregate score. Skipping the per-case diff. Upgrading without a canary. Assuming provider behaviour is stable across a version. Treating "the new model is better" as a migration plan.
+
+**Done when.** Every production model version is pinned, every upgrade has a per-case diff reviewed against the SLOs, a canary, a rollback plan, and a written decision.
+
+---
+
+#### E14. Manage incident response
+
+**Goal.** Restore service fast, communicate honestly, and learn something that changes the system rather than only the runbook.
+
+**How to do it.**
+
+1. **Define severity levels with response times, named roles, and an explicit authority to pause the feature.** Decide before the incident who may stop it.
+2. **Triage with a runbook:** what to check first, what to disable, and what the safe degraded state is. The most valuable first action is often turning off the riskiest feature, not fixing the cause.
+3. **Communicate on a schedule** — channel, owner, and template covering status, impact, and next update time. Silence during an incident is the complaint customers remember.
+4. **Involve the customer early when the impact is theirs.** An insurer's compliance function and a bank's operations team need to know within minutes, not after the root cause is known.
+5. **Preserve the evidence before changing anything:** the traces, the failing requests, and the configuration state. Restarting a pod can destroy the only record of the failure.
+6. **Write a post-mortem without blame,** with a timeline, contributing factors, and actions with owners and dates — including the actions that change the system rather than the documentation.
+7. **Track the actions to completion.** A post-mortem whose actions are never closed is a document, not a process.
+8. **Feed the incident back into the regression set and the alerts,** and check whether the monitoring would have caught it earlier.
+
+**Artifacts.** Severity matrix and escalation policy; triage runbooks; communication templates and cadence; customer notification protocol; evidence preservation checklist; post-mortem template with action tracker; incident-to-regression and incident-to-alert pipeline.
+
+**Worked example — Corvid.** The defining incident was a 40-minute period when the assistant's answers cited stale help-centre content after a bulk re-index ran during business hours. The response that mattered was the communication one: Corvid's support lead was told within eight minutes that answers might be inaccurate, with a stated next-update time, and the assistant was routed to human-only mode — a pause the pre-agreed pause criteria already authorised, so no debate was needed while people were deciding. The post-mortem's main action was moving the bulk re-index into the overnight window and adding a freshness check to the canary criteria, both of which came from the pause criteria being usable under pressure.
+
+**See also — the published postmortems** (PagerDuty's recurring incident reports; the AWS us-east-1 review of December 2021) are the working template: timeline first, contributing factors second, single root cause last — the ordering is deliberate, because single-root-cause narratives are usually wrong.
+
+**Watch out for.** No authority to pause. Silence while you diagnose. Changing things before preserving evidence. A post-mortem with actions that have no owners. Treating "no customer impact" as the only definition of an incident. Not feeding incidents back into alerts and the regression set.
+
+**Done when.** Severity, pause authority, runbooks, and the communication cadence are defined; every incident has a timeline, actions with owners, and a regression case; and repeat incidents are visible as a metric.
+
+---
+
+#### E15. Perform preventive maintenance
+
+**Goal.** Keep the system off the failure list by doing the work before it is needed, on a schedule, with the customer informed.
+
+**How to do it.**
+
+1. **Put maintenance on a calendar with a named owner** — index rebuilds, cache invalidation, dependency and base-image updates, certificate rotation, and capacity checks.
+2. **Rebuild indexes on a schedule with a rehearsed procedure and a rollback,** and measure how long a rebuild takes so it can be planned rather than feared.
+3. **Patch dependencies and base images on a cadence, testing in a mirror first** — the air-gapped environment needs the patch mirrored and the digest verified (B10).
+4. **Rotate credentials and certificates on schedule and confirm the rotation works.** An unrehearsed rotation is an outage with a date on it.
+5. **Prune caches and stale artifacts on policy** rather than when someone notices disk pressure.
+6. **Review access grants and audit logs on a schedule.** Access creep is a quiet failure mode.
+7. **Schedule maintenance windows with the customer and publish them** — a window announced in advance is an operational fact; an unannounced one is an incident.
+8. **Track deferred maintenance as risk,** with a date, because anything deferred is a risk with a date.
+
+**Artifacts.** Maintenance calendar with owners; index rebuild procedure and timings; patch policy and mirror procedure; credential rotation schedule; cache and artifact pruning policy; access review cadence; customer-visible maintenance calendar; deferred-maintenance risk register.
+
+**Worked example — St. Aldwyn Health.** Everything in the maintenance plan had to be mirrored into the hospital's network and digest-verified, including base images, the Python package index, and OS security updates for the GPU host. The schedule ran quarterly for the security base and monthly for the model artefacts, and the index rebuild was rehearsed once a quarter against a copy of the production index, so the real rebuild was a known-duration operation rather than an outage of unknown length. Every window was agreed with the hospital's IT team a month in advance, which mattered because clinical downtime is not acceptable — and the agreement is what makes the window legitimate.
+
+**Watch out for.** Maintenance with no owner or schedule. Rebuilding the live index first. Patching the primary without a mirror. Rotating credentials without a rehearsal. Deferring maintenance indefinitely without recording the risk. Maintenance windows that surprise the customer.
+
+**Done when.** Every maintenance task has an owner and a schedule, rebuilds and rotations are rehearsed, the customer-visible calendar exists, and deferred work is tracked as dated risk.
+
+---
+
+#### E16. Support batch and offline workloads
+
+**Goal.** Run the heavy asynchronous work properly — cheaper, slower to fail, and resumable.
+
+**How to do it.**
+
+1. **Separate batch from interactive:** different queues, different priorities, different hardware, and separate SLOs. Batch sharing a pool with interactive traffic is how the interactive p95 degrades (D8).
+2. **Use the provider's batch API or scheduled compute** where offered — a reported ~50% discount for asynchronous work — and accept the slower turnaround in exchange.
+3. **Make jobs idempotent and resumable,** checkpointed per chunk or per document, so a failure at hour six does not restart at zero.
+4. **Bound batch concurrency against the interactive budget,** and schedule the backlog in the customer's quiet hours.
+5. **Emit the same traces and metrics as the interactive path,** with a job-level view: items processed, failure rate, throughput, and age of the oldest pending item.
+6. **Alert on backlog age rather than on job failure,** because a silently growing backlog is the actual failure mode.
+7. **Reconcile counts:** documents discovered, processed, skipped, and failed — with the differences explained every run.
+8. **Treat bulk ingestion as a change to the production corpus:** back up the index, plan the swap, and rehearse the rollback.
+
+**Artifacts.** Batch and queue architecture; batch API adoption; checkpointing and resume design; concurrency and scheduling policy; job-level metrics and backlog alerts; count reconciliation report; bulk-swap and rollback procedure.
+
+**Worked example — Meridian Bank.** The nightly re-embed processed 4.2M chunks in a six-hour window on the bank's own hardware, built as a resumable job with per-chunk checkpoints after an early failure once cost a full night. The reconciliation report was the artefact the bank actually valued, because it listed every KYC file discovered, processed, skipped as duplicate, and failed — and a run with 12 unexplained failures was treated as a failed run even though 99.7% had succeeded, since an unexplained failure in a KYC corpus is exactly where a compliance gap hides.
+
+**Watch out for.** Batch sharing a pool with interactive traffic. Jobs that cannot resume. No backlog-age alerting. Calling a run successful because it exited zero. Bulk ingestion with no index backup or rollback. Ignoring reconciliation.
+
+**Done when.** Batch runs on its own resources with its own SLOs, resumes from checkpoints, alerts on backlog age, reconciles counts every run, and can be swapped or rolled back safely.
+
+---
+
+#### E17. Conduct regular quality reviews with customer stakeholders
+
+**Goal.** A recurring forum where the numbers, the failures, and the improvements are discussed with the people who own the business outcome.
+
+**How to do it.**
+
+1. **Set a fixed cadence and hold it.** A monthly 30-minute review beats a quarterly deep-dive nobody prepares for.
+2. **Use a standing agenda:** outcome metrics against their targets, new failures, improvements shipped since last time, the backlog with expected effect, and the risks.
+3. **Bring the customer's own feedback and incidents,** not just the dashboard. Their complaints are the leading indicator.
+4. **Agree the improvement backlog in the meeting,** with owners and dates, so the review produces decisions rather than status.
+5. **Rotate the focus:** one month on quality, one on cost, one on roadmap and adoption, one on risk and compliance.
+6. **Be explicit about the failures,** including the ones you caused, and about what remains unresolved. A review where everything is fine is a review that will eventually be wrong.
+7. **Track engagement health:** adoption, the number of internal champions, and support ticket volume. Engagement risk is a real risk and is usually invisible until it is not.
+8. **Record and circulate the review within a day** — decisions, owners, dates.
+
+**Artifacts.** Review cadence and agenda template; metric pack per review; improvement backlog with owners; failure and incident summary; adoption and engagement metrics; decision log; circulated minutes.
+
+**Worked example — Corvid.** The monthly review with Corvid's VP Support and her team was structured around the outcome metrics and the failure taxonomy, and the format included the assistant's worst ten answers of the month with the specific defect named. That was uncomfortable, and it was the reason the backlog had customer buy-in: the team could see which failures were worth fixing and why the fixes were prioritised, and the VP could see that the deflection number was not being bought with quality.
+
+**Watch out for.** Reviews that drift into feature wish-lists. A status meeting with no decisions. Only good news. Missing the customer's own complaints. Irregular cadence. No written record. Ignoring engagement health until the champion leaves.
+
+**Done when.** A fixed cadence is held with a standing agenda, the customer agrees the backlog with owners and dates, failures are presented alongside metrics, and engagement health is tracked.
+
+---
+
+#### E18. Document and fix recurring issues
+
+**Goal.** Stop the same failure from being re-debugged, and turn repeated manual work into durable fixes.
+
+**How to do it.**
+
+1. **File every recurring issue with a trace, the root cause, and the fix.** A bug ticket without a reproduction gets closed without a fix.
+2. **Count occurrences.** An issue seen three times is a system defect; an issue seen once is an incident.
+3. **Prefer the durable fix over the workaround,** and retire the workaround once the fix ships — workarounds outlive the engineer who wrote them.
+4. **Contribute upstream** when the defect is in a dependency or an open-source component you use; an upstream patch fixes every customer, not just this one.
+5. **Update the runbook and the alerting with each fix,** and verify the runbook by having someone else follow it.
+6. **Track repeat incident rate as a metric.** It is one of the most informative operational numbers you can keep, and it is the number the customer feels.
+7. **Show the recurring-issue log at the customer review,** with the fixes landed and the ones outstanding.
+8. **Keep the knowledge in the customer's environment,** not only in yours — a runbook that lives in vendor tooling is a runbook the customer cannot use at 2am.
+
+**Artifacts.** Recurring issue log with counts and root causes; defect tickets with reproductions; upstream contribution tracker; runbook update protocol; repeat incident rate metric; workaround retirement checklist; knowledge in the customer's environment.
+
+**Worked example — Northwind Mutual.** The adjuster-facing symptom "the system gets it wrong on supplement claims" appeared nine times over three weeks, and the count was what turned it from an incident into a defect. The recurring pattern was the same each time — an amendment to the claims manual changing the notification deadline — and the durable fix was the freshness check from E12 plus a rule that any manual amendment must be indexed within 24 hours, with a named operational owner. The temporary workaround (a human check on supplement claims) was retired once the fix shipped, which mattered because workarounds of that kind quietly become permanent.
+
+**Watch out for.** Closing tickets without a reproduction. Fixing the same symptom repeatedly without counting. Workarounds that never get retired. Runbooks that exist only in vendor tooling. Not measuring repeat incident rate. Fixing the symptom and calling it the cause.
+
+**Done when.** Recurring issues are counted and rooted, each has a durable fix or a retired workaround, runbooks are updated and verified by someone else, and the repeat incident rate is tracked.
+
+---
+
+#### E19. Manage capacity planning
+
+**Goal.** Know what breaks first as volume grows, and buy or change before it breaks.
+
+**How to do it.**
+
+1. **Model demand:** current volumes, growth rate, seasonality, and the specific peaks that shape the system — including the burst-to-average ratio that decided Corvid's design.
+2. **Model consumption per unit of demand:** tokens per request, GPU-seconds per request, storage per document, and the cost of the backfill jobs.
+3. **Identify the constraint that binds first** — GPU hours, storage, database throughput, egress, or human review capacity. These bind at very different volumes, and the first one is rarely the one you provisioned for.
+4. **Forecast procurement lead time against the growth curve.** A constraint with a 12-week lead time must be in the plan a quarter early, not a week before it bites.
+5. **Model headroom as a multiple of peak,** and specify what happens at each level of saturation: shed, degrade, queue, or fail.
+6. **Re-plan with production telemetry** rather than launch assumptions, and put the plan in the customer's review.
+7. **Watch human capacity.** A system that generates work for review consumes reviewer hours, and that constraint is invisible in an infrastructure plan.
+8. **Re-forecast on a schedule** and after every significant change to the traffic mix.
+
+**Artifacts.** Demand forecast; per-unit consumption model; constraint analysis naming the binding constraint; procurement lead-time plan; saturation behaviour specification (shed/degrade/queue); capacity plan for the customer review; human-capacity analysis; re-forecast schedule.
+
+**Worked example — St. Aldwyn Health.** The binding constraint was not compute but procurement. The hospital's GPU lead time was 8 to 12 weeks, so a capacity plan built on 3% annual growth in encounters was irrelevant — the constraint was the time between deciding and receiving, which meant the plan needed a *decision date* rather than a capacity number. The plan therefore specified trigger points ("sustained queue depth above X for Y minutes") that would start the procurement conversation 12 weeks before predicted exhaustion. It also accounted for human capacity, because every generated summary was reviewed by a physician and clinician-hours available were the real ceiling on how many summaries the hospital could absorb.
+
+**Watch out for.** Planning capacity as a percentage rather than in the unit of constraint. Ignoring procurement lead times. Forgetting human review capacity. Modelling average demand and missing peaks. No defined behaviour at saturation. Re-planning annually.
+
+**Done when.** The binding constraint is named with its lead time, demand and consumption are modelled from production data, saturation behaviour is specified, and the plan is reviewed with the customer on a schedule.
+
+---
+
+#### E20. Provide remote support between on-site visits
+
+**Goal.** Stay useful without being on site, with a support model that survives your absence.
+
+**How to do it.**
+
+1. **Define the support model in writing:** channels, response expectations by severity, coverage hours, and the customer-side contact — name a role, not a person.
+2. **Make remote debugging effective by making the customer's environment observable:** the customer can run a diagnostic bundle, or the trace extract travels through an agreed, audited path.
+3. **Schedule check-ins in advance.** A recurring 30-minute slot prevents the emergency meeting, and the emergency meeting is the most expensive way to work.
+4. **Keep an async path as the default:** a shared tracker with priorities, owners, and dates, so progress does not depend on both sides being awake at once.
+5. **Define the escalation path** with a name, a number, and a time window, and use it deliberately — the existence of an escalation path is what makes the async path acceptable to the customer.
+6. **Hand over explicitly at the end of every on-site visit:** what was set up, what is monitored, what will be watched, and what the customer's team owns.
+7. **Keep a runbook of remote procedures** so the customer can run routine tasks without you, and rehearse it with them.
+8. **Track the support load.** Repeat questions are documentation gaps, and support ticket volume is a quality metric.
+
+**Artifacts.** Support model definition; escalation path with contacts and windows; scheduled check-in cadence; async issue tracker template; diagnostic bundle; on-site-to-remote handover checklist; remote runbook; support ticket volume and repeat-question analysis.
+
+**Worked example — Halden & Rowe.** The firm had no operations staff and a single workstation, so remote support was the only viable model and had to be designed rather than improvised. The design was a monthly scheduled session for the runbook walkthrough, a written tracker for anything between sessions, and a diagnostic bundle the firm's IT contact could run — a short script collecting the log window, index statistics, and model version with no matter content, which was the condition that made the client willing to run it at all. The handover document after each visit listed exactly what the firm's IT contact owned, and the first item was always the two maintenance tasks they could perform themselves.
+
+**See also — the Google SRE Book and SRE Workbook** (2016–18) remain the clearest statement of the operating standard this pillar is trying to reach: runbooks that someone else can follow, on-call that is a designed rotation, and handover that transfers ownership rather than transferring tasks.
+
+**Watch out for.** Support that depends on the engineer's availability rather than a defined model. No escalation path, or one that is never used. Sending customer data through a path the customer's confidentiality policy does not permit. On-site visits that end without an explicit handover. Async support quietly becoming the emergency channel. Not counting repeat support questions as a documentation gap.
+
+**Done when.** A written support model with an escalation path is in place, the customer can run diagnostics and routine tasks without you, every visit ends with a handover, and repeat support questions are tracked as documentation gaps.
+
+---
+
+#### Documented Cases Referenced
+
+Publicly reported cases used throughout Pillar E, cited for the decision pattern each illustrates.
+
+| Case | Year | Point it supports | Used in |
+|------|------|-------------------|---------|
+| **OpenTelemetry GenAI semantic conventions** and **OpenInference** — vendor-neutral conventions for model, retrieval, and tool spans | 2024–25 | Standard span conventions keep traces portable and comparable | E1, E3 |
+| **"Hidden Technical Debt in Machine Learning Systems"** (Sculley et al., NIPS) — data dependencies, configuration debt, feedback loops, and pipeline changes as failure sources | 2015 | The four root-cause categories are the canonical ones | E7, E12 |
+| **AWS Builders' Library — "Avoiding insurmountable queue backlogs"** — load shedding and queue discipline | 2019 | Overload must be shed deliberately, not absorbed | E5, E19 |
+| **Published incident postmortems** (PagerDuty's recurring reports; AWS us-east-1, Dec 2021) — timelines, contributing factors, and customer communication as a discipline | 2012–22 | Incident practice is documented, learnable, and copyable | E14 |
+| **Log4Shell (CVE-2021-44228)** — an unpatched transitive dependency as a global outage | 2021 | Dependency currency is preventive maintenance, not housekeeping | E15 |
+| **Southwest Airlines chatbot incident** (2022) — automated customer advice with no clean path to a human | 2022 | An AI incident is a real incident with a real customer record | E14, E5 |
+| **Pinecone chunking evaluation** (2024) — recursive, semantic, fixed, and late chunking compared on retrieval accuracy | 2024 | Chunking changes require re-evaluation, not a preference | E10, E12 |
+| **March 2023 GPT-4 update** (reported) — observable behavioural change without a version bump | 2023 | Pin versions and evaluate before adopting an update | E13 |
+| **DORA / Accelerate State of DevOps reports** (2018–2024) — change failure rate and time to restore as the operational metrics that matter | 2018–24 | Measure the operational outcome, not the component health | E5, E14, E17 |
+| **RLHF and its modern descendants** (Christiano et al., 2017 onward) — human preference as the canonical feedback signal | 2017 | Feedback is valuable only when curated and labelled | E11 |
+| **Google SRE Book and SRE Workbook** — on-call practice, incident response, and the runbook culture | 2016–18 | The operating standard for runbooks, on-call, and handover | E14, E18, E20 |
+| **Stanford AI Index reports** (2024–2025) — the persistent gap between demonstration and reliable production performance | 2024–25 | Expect reliability work, not demo-quality outcomes | E17 |
+| **Provider batch APIs** (OpenAI Batch API and equivalents) — reported up to 50% discount for asynchronous workloads | 2023–24 | Async work should run on the batch tier | E9, E16 |
 
 </details>
 
